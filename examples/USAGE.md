@@ -7,7 +7,7 @@
 /Volumes/漫画/待整理
 ```
 
-The skill will use the default Kavita-by-chapter profile, produce one CBZ per chapter, preserve source files, perform preflight, fetch high-confidence Bangumi metadata, write ComicInfo.xml, and validate the output.
+The skill will use the default Kavita-by-chapter profile, produce one CBZ per chapter, preserve source files, perform preflight, require Chinese Bangumi titles and summaries without Japanese fallback, preserve verified creator names, write ComicInfo.xml, and validate the output.
 
 ## Specify destination
 

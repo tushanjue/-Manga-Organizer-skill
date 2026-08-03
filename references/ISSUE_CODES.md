@@ -64,3 +64,4 @@ Use stable codes in `preflight.md` and `plan.json`.
 - `META005`: invalid ComicInfo.xml - SAFE_FIX/REVIEW
 - `META006`: language or direction uncertain - REVIEW
 - `META007`: alternate edition duplicates a primary Kavita chapter identity - REVIEW
+- `META008`: a Chinese-required Bangumi field lacks a reliable Chinese value or would require Japanese fallback - REVIEW

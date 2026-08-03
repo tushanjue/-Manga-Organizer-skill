@@ -17,6 +17,18 @@ Try, in order:
 5. ISBN/GTIN;
 6. manually supplied subject ID.
 
+Japanese/original titles and prose are matching evidence only; they are not valid fallbacks for Chinese-required fields. Verified creator names follow the explicit exception below.
+
+## Mandatory Chinese output
+
+- Default to simplified Chinese (`zh-Hans`); use traditional Chinese (`zh-Hant`) when configured.
+- Prefer the current API's Chinese-localized field such as `name_cn`, followed by a verified Chinese alias or existing locked Chinese metadata. Treat the original `name`, kana, and Japanese aliases as match/provenance data only.
+- Require Chinese display values for Bangumi-derived `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, `Summary`, `Genre`, `Tags`, and publisher names.
+- Allow official Japanese creator names in evidence-backed role fields such as `Writer`, `Penciller`, and `CoverArtist` when no reliable Chinese form exists; this exception never applies to titles or summaries.
+- Reject Japanese fallback text containing hiragana or katakana. Accept Han-only names as Chinese output only when they come from a Chinese-designated field or another verified Chinese source.
+- If no reliable Chinese value exists for a Chinese-required field, leave it unchanged or pending, add `META008`, and route it to `_Needs Review`; never copy Japanese into titles or summaries.
+- Do not machine-translate or invent missing Chinese metadata unless the user explicitly permits translation. Except for verified creator names, keep original Japanese values only in reports as provenance.
+
 ## High-confidence evidence
 
 - exact normalized title or alias;
@@ -29,6 +41,6 @@ Try, in order:
 
 ## Safe application
 
-Series-level fields may be shared across volumes. Volume-specific cover, date, ISBN, and title should only be applied when the selected subject actually represents that volume.
+Series-level fields may be shared across volumes. Volume-specific cover, date, ISBN, and Chinese title should only be applied when the selected subject actually represents that volume.
 
 Store the selected Bangumi subject ID and canonical reference in the report. Put the reference into `Web` only when it is a stable public subject page.

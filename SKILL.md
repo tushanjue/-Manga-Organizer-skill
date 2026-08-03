@@ -268,14 +268,9 @@ Default policy: preserve quality without unnecessary upscaling.
 
 Use Bangumi only after local name parsing.
 
-Search with several normalized candidates:
+Search with normalized simplified/traditional Chinese titles, Japanese/original titles, aliases, release-tag-stripped titles, and ISBN or subject ID. Use Japanese values for matching evidence only.
 
-- simplified Chinese title;
-- traditional Chinese title;
-- Japanese/original title;
-- aliases;
-- title with scanlation and release tags removed;
-- ISBN or Bangumi subject ID when present.
+For default Chinese libraries, every Bangumi-derived display value must be Chinese, including `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, `Summary`, `Genre`, `Tags`, and publisher names. Creator-role fields such as `Writer`, `Penciller`, and `CoverArtist` are the exception: they may retain an official Japanese name when the person and role match is high-confidence. For Chinese-required fields, prefer the current API's localized field such as `name_cn`, then verified Chinese aliases or existing Chinese metadata; never fall back to the Japanese/original `name`, kana, or text containing hiragana/katakana. If reliable Chinese text is unavailable, keep an existing locked Chinese value or leave the field pending, record `META008`, and send it to review; do not invent or machine-translate without explicit permission. Preserve other Japanese originals only in reports as matching provenance.
 
 Use current official endpoints, including subject search and subject detail endpoints as documented at execution time.
 
@@ -341,7 +336,7 @@ Use `zh-Hant` for traditional Chinese. Do not write RTL when the evidence indica
 
 Set `PageCount` from the actual packaged page count. Mark the selected first cover in `Pages`. Preserve unknown XML elements and extension fields when updating existing metadata. Disable external XML entities and never resolve external resources.
 
-For a normal chapter CBZ, set `Series`, `LocalizedSeries`, and `SeriesSort` consistently; set `Number` to the actual chapter, `Volume` only to a confirmed volume, `Count` only when reliable total-chapter evidence exists, and `PageCount` to the actual image count. Preserve `LanguageISO`, `Manga`, and all other evidence-backed metadata. For extras, appendices, and setting material, use an `SP` number with `Format=Special`; never disguise them as numbered chapters.
+For a normal chapter CBZ, set `Series`, `LocalizedSeries`, and `SeriesSort` consistently; set `Number` to the actual chapter, `Volume` only to a confirmed volume, `Count` only when reliable total-chapter evidence exists, and `PageCount` to the actual image count. Bangumi-derived display text must pass the Section 6 Chinese-language gate, except high-confidence creator names may remain Japanese. Preserve `LanguageISO`, `Manga`, and all other evidence-backed metadata. For extras, appendices, and setting material, use an `SP` number with `Format=Special`; never disguise them as numbered chapters.
 
 ## 8. Output profiles
 
@@ -486,7 +481,7 @@ The task is complete only when:
 - chapter sequences have no unintended gaps or duplicates and every completed CBZ represents exactly one chapter or identified special;
 - every volume-PDF page is assigned exactly once with no gaps or overlaps, as recorded in `chapter-boundaries.json`;
 - image-based EPUB order follows the spine;
-- Bangumi matches were either high-confidence or left for review;
+- Bangumi matches were high-confidence and all Chinese-required title/description fields are Chinese, or the affected fields were left for review without Japanese fallback;
 - ComicInfo.xml contains actual page count and correct language/direction;
 - Kavita output passes directory-layout checks;
 - checksums and execution report exist;

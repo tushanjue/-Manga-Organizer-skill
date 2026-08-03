@@ -27,6 +27,13 @@ network:
 
 bangumi:
   enabled: true
+  metadata_language: zh-Hans
+  require_chinese_text: true
+  allow_japanese_fallback: false
+  allow_japanese_creator_names: true
+  allow_machine_translation: false
+  original_title_policy: report-only
+  missing_chinese_action: needs-review
   user_agent: "developer-id/Manga-Organizer-Skill/1.0"
   access_token_from_environment: BANGUMI_ACCESS_TOKEN
   auto_match_threshold: 0.92

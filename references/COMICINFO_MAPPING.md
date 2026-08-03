@@ -57,6 +57,15 @@ Do not map every Bangumi person to `Writer`. Preserve the original role in the r
 - English: `en`
 - Japanese/right-to-left manga: `Manga = YesAndRightToLeft`
 
+## Bangumi text language
+
+- For a Chinese library, require Chinese Bangumi-derived values in `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, `Summary`, `Genre`, `Tags`, and publisher display fields.
+- Creator-role fields may use an official Japanese name when the person and role mapping is high-confidence and no reliable Chinese form exists.
+- Use `zh-Hans` or `zh-Hant` according to the configured metadata language; in Chinese-required fields, never substitute Japanese `name`, kana, or Japanese prose. This does not override the creator-name exception above.
+- Preserve an original Japanese title only in reports as matching provenance, not in ComicInfo title or summary fields.
+- If a Chinese value is unavailable, retain an existing locked Chinese value or leave the field pending and report `META008`; do not silently translate or fall back to Japanese.
+- Keep `LanguageISO` aligned with the manga edition's content language; it does not authorize Japanese metadata fallback.
+
 ## Pages
 
 - `PageCount` must equal the actual packaged image count.
