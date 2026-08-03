@@ -62,6 +62,7 @@ Never place the output inside the source tree because that can cause recursive r
 10. Never use OCR unless filenames, embedded metadata, and directory context are insufficient and the user explicitly permits it.
 11. Default to one chapter per CBZ. Use `kavita-volume` only when the user explicitly requests one CBZ per volume; never infer that choice from a volume-level PDF.
 12. Never package a multi-chapter volume PDF as one CBZ under the default profile. Split it only from validated boundaries, or place it in `_Needs Review` without guessing.
+13. When updating an existing output library, modify metadata only: preserve source files, chapter identity, page order, and every non-metadata member byte; back up first, work in staging, validate, then atomically replace.
 
 ## 3. Network and proxy rules
 
@@ -188,7 +189,7 @@ For matching only, derive a cleaned title by removing or separating common relea
 - resolution and image-format labels;
 - bracketed release metadata.
 
-Do not discard this information. Preserve relevant values in `Translator`, `ScanInformation`, `Tags`, or the report.
+Do not discard this information. Preserve relevant values in `Translator`, `ScanInformation`, `Tags`, `Notes`, or the report. Recognized release tags such as `简中`, `繁中`, `汉化`, and `扫图` are explicit allowed Han-tag exceptions.
 
 Recognize common numbering forms including:
 
@@ -268,9 +269,14 @@ Default policy: preserve quality without unnecessary upscaling.
 
 Use Bangumi only after local name parsing.
 
-Search with normalized simplified/traditional Chinese titles, Japanese/original titles, aliases, release-tag-stripped titles, and ISBN or subject ID. Use Japanese values for matching evidence only.
+Search with normalized simplified/traditional Chinese titles, Japanese/original titles, aliases, release-tag-stripped titles, and ISBN or subject ID. Use Japanese values for matching evidence only. Before creating or updating ComicInfo for a Chinese library, read and apply `references/METADATA_POLICY.md` after merging sources.
 
-For default Chinese libraries, every Bangumi-derived display value must be Chinese, including `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, `Summary`, `Genre`, `Tags`, and publisher names. Creator-role fields such as `Writer`, `Penciller`, and `CoverArtist` are the exception: they may retain an official Japanese name when the person and role match is high-confidence. For Chinese-required fields, prefer the current API's localized field such as `name_cn`, then verified Chinese aliases or existing Chinese metadata; never fall back to the Japanese/original `name`, kana, or text containing hiragana/katakana. If reliable Chinese text is unavailable, keep an existing locked Chinese value or leave the field pending, record `META008`, and send it to review; do not invent or machine-translate without explicit permission. Preserve other Japanese originals only in reports as matching provenance.
+- Require reliable Chinese in `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, `Summary`, and `Genre`. Use a unified Chinese series name; use `第{chapter}话` or a reliable Chinese chapter title for normal chapters, and a reliable Chinese special title for `SP` items.
+- Format `Publisher` as `中文译名（原文名）` when both reliable, different values exist; do not fabricate or duplicate names.
+- Keep `Tags` non-Chinese by default, but allow recognized Chinese release tags and documented user-locked exceptions; preserve exact `cosplay`.
+- Permit reliable official creator names in their original language. Keep other Japanese originals only for matching and source reports.
+
+If a required Chinese value, Publisher component, or reliable canonical tag is unavailable, preserve a locked value or send it to review; never invent or silently translate it.
 
 Use current official endpoints, including subject search and subject detail endpoints as documented at execution time.
 
@@ -302,11 +308,13 @@ Metadata merge priority by default:
 ```text
 locked user value
 > existing valid ComicInfo.xml
-> exact volume-level Bangumi data
-> series-level Bangumi data
-> EPUB/PDF embedded metadata
+> exact volume-level metadata
+> series-level metadata
+> embedded metadata
 > filename and folder inference
 ```
+
+After merging, validate every field against `references/METADATA_POLICY.md`; `Tags` from every source must pass the language-exception and allowlist rules.
 
 Use Bangumi series covers for the library record only unless the user explicitly asks to insert or replace a page. Do not silently add a generic series cover as every volume's first page.
 
@@ -316,14 +324,7 @@ Cache successful API responses and continue local processing if the network beco
 
 Every generated CBZ must contain exactly one UTF-8 `ComicInfo.xml` at the archive root.
 
-Populate fields when evidence exists:
-
-- identity: `Title`, `Series`, `LocalizedSeries`, `SeriesSort`, `Number`, `Count`, `Volume`;
-- description and date: `Summary`, `Notes`, `Year`, `Month`, `Day`;
-- people: `Writer`, `Penciller`, `Inker`, `Colorist`, `Letterer`, `CoverArtist`, `Editor`, `Translator`;
-- publication and classification: `Publisher`, `Imprint`, `Genre`, `Tags`, `Web`, `AgeRating`, `CommunityRating`, `GTIN`;
-- technical metadata: `PageCount`, `LanguageISO`, `Format`, `BlackAndWhite`, `Manga`, `ScanInformation`;
-- page metadata: `Pages` / `ComicPageInfo`.
+Populate evidence-backed fields described in `references/COMICINFO_MAPPING.md`, then enforce `references/METADATA_POLICY.md`.
 
 Defaults for translated Japanese manga:
 
@@ -336,7 +337,9 @@ Use `zh-Hant` for traditional Chinese. Do not write RTL when the evidence indica
 
 Set `PageCount` from the actual packaged page count. Mark the selected first cover in `Pages`. Preserve unknown XML elements and extension fields when updating existing metadata. Disable external XML entities and never resolve external resources.
 
-For a normal chapter CBZ, set `Series`, `LocalizedSeries`, and `SeriesSort` consistently; set `Number` to the actual chapter, `Volume` only to a confirmed volume, `Count` only when reliable total-chapter evidence exists, and `PageCount` to the actual image count. Bangumi-derived display text must pass the Section 6 Chinese-language gate, except high-confidence creator names may remain Japanese. Preserve `LanguageISO`, `Manga`, and all other evidence-backed metadata. For extras, appendices, and setting material, use an `SP` number with `Format=Special`; never disguise them as numbered chapters.
+For a normal chapter CBZ, use the actual `Number`, a confirmed `Volume`, the actual `PageCount`, and a Chinese `Title`. Keep `Series`, `LocalizedSeries`, and `SeriesSort` on one Chinese series name. For extras, appendices, and setting material, use an `SP` number, reliable Chinese title, and `Format=Special`; never disguise them as numbered chapters.
+
+For metadata-only updates, change only the root `ComicInfo.xml`. Preserve archive member names/order, image and other non-metadata bytes, chapter identity, and source files; create a backup, stage and validate the candidate, then atomically replace the output.
 
 ## 8. Output profiles
 
@@ -410,6 +413,8 @@ Before finalizing each archive:
 9. confirm no prohibited or accidental files remain;
 10. verify the final filename and path;
 11. compute a SHA-256 checksum.
+12. validate Chinese fields, `Publisher` policy, `Tags` language exceptions, the locked-tag allowlist, and exact retention of pre-existing `cosplay`;
+13. for metadata-only updates, compare member order and per-member SHA-256 before/after and confirm all non-metadata bytes and chapter identity are unchanged.
 
 Across the completed batch, verify that chapter numbers have no unintended gaps or duplicates, every CBZ represents exactly one normal chapter or one identified special, and each source PDF page is covered exactly once. Recompute each source-file SHA-256 and confirm it matches the pre-conversion hash.
 
@@ -454,6 +459,7 @@ The final report must state:
 - skipped or quarantined items;
 - validation results;
 - chapter-boundary evidence and source-page coverage results;
+- metadata audit: final Chinese series name, final Publisher, tag normalization mapping, retained special tags with reasons, omitted/review tags, and whether images remained byte-identical;
 - confirmation that source files were not modified;
 - any unresolved issues.
 
@@ -478,14 +484,16 @@ The task is complete only when:
 - preflight and plan files exist;
 - every completed CBZ passes integrity, XML, and image checks;
 - PDF page counts match generated pages;
+- every normal chapter has exactly one CBZ, while specials use `SP` and `Format=Special`;
 - chapter sequences have no unintended gaps or duplicates and every completed CBZ represents exactly one chapter or identified special;
 - every volume-PDF page is assigned exactly once with no gaps or overlaps, as recorded in `chapter-boundaries.json`;
 - image-based EPUB order follows the spine;
-- Bangumi matches were high-confidence and all Chinese-required title/description fields are Chinese, or the affected fields were left for review without Japanese fallback;
+- Chinese title fields, Publisher policy, Tags policy, protected tags, and user-locked metadata pass `references/METADATA_POLICY.md` or are explicitly left for review;
 - ComicInfo.xml contains actual page count and correct language/direction;
 - Kavita output passes directory-layout checks;
 - checksums and execution report exist;
 - source-file hashes match before and after conversion;
+- metadata-only updates preserve chapter identity, member order, and every non-metadata member byte;
 - no Git operation was performed.
 
 Consult the bundled references for detailed format, metadata, and issue rules.

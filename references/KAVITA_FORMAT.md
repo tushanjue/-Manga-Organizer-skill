@@ -67,6 +67,10 @@ Assign front cover, contents, and other front matter to the volume's first chapt
 
 Inputs already representing one chapter per PDF, image-based EPUB, or archive remain one-to-one chapter CBZs.
 
+## Existing library updates
+
+For metadata-only updates, keep the existing CBZ's images, other non-metadata members, member order, page order, and chapter identity unchanged. Create a backup, build and validate the candidate in staging, compare per-member hashes, then atomically replace the output. See `METADATA_POLICY.md`.
+
 ## Chapter ComicInfo
 
 Set `Series`, `LocalizedSeries`, and `SeriesSort` consistently; `Number` to the actual chapter; `Volume` only to a confirmed volume; `Count` only from reliable total-chapter evidence; and `PageCount` to the actual packaged image count. Retain evidence-backed `LanguageISO`, `Manga`, and other metadata.

@@ -16,6 +16,13 @@ safety:
   backup_existing_output: true
   staging_directory: ""
   stop_on_blocker: true
+  metadata_only_update:
+    preserve_non_metadata_member_bytes: true
+    preserve_member_order: true
+    preserve_page_order: true
+    preserve_chapter_identity: true
+    require_backup: true
+    require_staging_and_atomic_replace: true
 
 network:
   use_session_proxy: true
@@ -28,8 +35,8 @@ network:
 bangumi:
   enabled: true
   metadata_language: zh-Hans
-  require_chinese_text: true
-  allow_japanese_fallback: false
+  require_chinese_title_fields: true
+  allow_japanese_title_fallback: false
   allow_japanese_creator_names: true
   allow_machine_translation: false
   original_title_policy: report-only
@@ -40,6 +47,23 @@ bangumi:
   winner_margin: 0.10
   cache_days: 30
   cover_policy: library-only
+
+metadata_policy:
+  chinese_fields: [Series, LocalizedSeries, SeriesSort, Title, Summary, Genre]
+  normal_chapter_title: "第{chapter}话"
+  publisher:
+    format: "{zh}（{original}）"
+    use_fullwidth_parentheses: true
+    avoid_identical_duplication: true
+    incomplete_action: needs-review
+  tags:
+    forbid_han_by_default: true
+    allowed_han_release_tags: [简中, 繁中, 汉化, 扫图]
+    protected: [cosplay]
+    preserve_existing_exact: [cosplay]
+    locked_special_allowlist: []
+    route_release_terms_outside_tags: false
+    unresolved_action: needs-review
 
 naming:
   series_directory: "{series}"
@@ -103,3 +127,10 @@ validation:
   verify_one_chapter_per_cbz: true
   verify_source_page_coverage: true
   verify_source_hash_unchanged: true
+  verify_chinese_title_fields: true
+  verify_publisher_policy: true
+  verify_tag_language_policy: true
+  verify_protected_tags: true
+  verify_non_metadata_member_bytes: true
+  verify_member_order_unchanged: true
+  verify_chapter_identity_unchanged: true

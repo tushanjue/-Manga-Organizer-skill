@@ -34,6 +34,12 @@ The skill will use the default Kavita-by-chapter profile, produce one CBZ per ch
 整理 ~/漫画/待处理，只使用现有 ComicInfo.xml 和文件名，不访问 Bangumi。
 ```
 
+## Metadata-only library update
+
+```text
+只更新现有 CBZ 的 ComicInfo.xml：系列名和话名使用中文，Publisher 使用“史克威尔艾尼克斯（スクウェア・エニックス）”，保留 cosplay，不改动图片、页序或章节编号。
+```
+
 ## Custom profile
 
 ```text

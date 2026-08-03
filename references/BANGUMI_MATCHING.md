@@ -19,15 +19,14 @@ Try, in order:
 
 Japanese/original titles and prose are matching evidence only; they are not valid fallbacks for Chinese-required fields. Verified creator names follow the explicit exception below.
 
-## Mandatory Chinese output
+## Field application
 
 - Default to simplified Chinese (`zh-Hans`); use traditional Chinese (`zh-Hant`) when configured.
 - Prefer the current API's Chinese-localized field such as `name_cn`, followed by a verified Chinese alias or existing locked Chinese metadata. Treat the original `name`, kana, and Japanese aliases as match/provenance data only.
-- Require Chinese display values for Bangumi-derived `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, `Summary`, `Genre`, `Tags`, and publisher names.
+- Require Chinese in `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, `Summary`, and `Genre`.
 - Allow official Japanese creator names in evidence-backed role fields such as `Writer`, `Penciller`, and `CoverArtist` when no reliable Chinese form exists; this exception never applies to titles or summaries.
-- Reject Japanese fallback text containing hiragana or katakana. Accept Han-only names as Chinese output only when they come from a Chinese-designated field or another verified Chinese source.
-- If no reliable Chinese value exists for a Chinese-required field, leave it unchanged or pending, add `META008`, and route it to `_Needs Review`; never copy Japanese into titles or summaries.
-- Do not machine-translate or invent missing Chinese metadata unless the user explicitly permits translation. Except for verified creator names, keep original Japanese values only in reports as provenance.
+- Apply bilingual `Publisher` and `Tags` rules from `METADATA_POLICY.md`, including recognized release-tag exceptions; never copy other Bangumi Chinese tags directly without validation.
+- If a required value is unavailable, preserve a locked value or send it to review; do not invent or silently translate it.
 
 ## High-confidence evidence
 

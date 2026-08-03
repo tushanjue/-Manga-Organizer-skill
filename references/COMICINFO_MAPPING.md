@@ -43,8 +43,8 @@ Do not map every Bangumi person to `Writer`. Preserve the original role in the r
 
 ## Classification
 
-- `Genre`: broad genres, comma-separated.
-- `Tags`: narrower tags, comma-separated.
+- `Genre`: reliable Chinese broad genres, comma-separated.
+- `Tags`: validated canonical tags plus recognized Chinese release-tag exceptions, comma-separated; see `METADATA_POLICY.md`.
 - `Format`: `Digital`, `Web`, `Artbook`, `Special`, or another meaningful value.
 - `AgeRating`: only when the source provides reliable evidence.
 - `CommunityRating`: ComicInfo uses a 0-5 range; normalize external ratings carefully and record the conversion.
@@ -57,13 +57,13 @@ Do not map every Bangumi person to `Writer`. Preserve the original role in the r
 - English: `en`
 - Japanese/right-to-left manga: `Manga = YesAndRightToLeft`
 
-## Bangumi text language
+## Field language policy
 
-- For a Chinese library, require Chinese Bangumi-derived values in `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, `Summary`, `Genre`, `Tags`, and publisher display fields.
+- Read `METADATA_POLICY.md` before creating or updating ComicInfo.
+- Require Chinese in `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, `Summary`, and `Genre`.
+- Format `Publisher` as `中文译名（原文名）` when both reliable, different values exist; an original Japanese name in parentheses is allowed.
+- Validate `Tags` as non-Chinese canonical terms by default, preserve exact `cosplay`, and allow recognized Chinese release tags plus documented user-locked exceptions.
 - Creator-role fields may use an official Japanese name when the person and role mapping is high-confidence and no reliable Chinese form exists.
-- Use `zh-Hans` or `zh-Hant` according to the configured metadata language; in Chinese-required fields, never substitute Japanese `name`, kana, or Japanese prose. This does not override the creator-name exception above.
-- Preserve an original Japanese title only in reports as matching provenance, not in ComicInfo title or summary fields.
-- If a Chinese value is unavailable, retain an existing locked Chinese value or leave the field pending and report `META008`; do not silently translate or fall back to Japanese.
 - Keep `LanguageISO` aligned with the manga edition's content language; it does not authorize Japanese metadata fallback.
 
 ## Pages
