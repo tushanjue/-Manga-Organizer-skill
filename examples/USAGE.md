@@ -7,7 +7,7 @@
 /Volumes/漫画/待整理
 ```
 
-The skill will use the default Kavita-by-volume profile, preserve source files, perform preflight, fetch high-confidence Bangumi metadata, write ComicInfo.xml, and validate the output.
+The skill will use the default Kavita-by-chapter profile, produce one CBZ per chapter, preserve source files, perform preflight, fetch high-confidence Bangumi metadata, write ComicInfo.xml, and validate the output.
 
 ## Specify destination
 
@@ -16,10 +16,16 @@ The skill will use the default Kavita-by-volume profile, preserve source files, 
 先显示问题报告；无阻断问题时自动继续。
 ```
 
-## Chapter-based library
+## Multi-chapter volume PDFs
 
 ```text
-把 D:\MangaInbox 按 Kavita 章节模式整理，简体中文，日漫从右向左。
+把 D:\MangaInbox 中的卷级 PDF 按话拆分，每话一个 CBZ。先显示章节拆分表，无法验证完整页面覆盖时放入 _Needs Review。
+```
+
+## Explicit volume-based library
+
+```text
+我明确需要每卷一个 CBZ：把 D:\MangaInbox 按 kavita-volume 整理。
 ```
 
 ## No network metadata

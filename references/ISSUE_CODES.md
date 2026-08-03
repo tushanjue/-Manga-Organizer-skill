@@ -49,6 +49,8 @@ Use stable codes in `preflight.md` and `plan.json`.
 - `PDF002`: PDF contains text/bookmarks/links that CBZ will not preserve - WARNING
 - `PDF003`: PDF page render failed - BLOCKER for affected page/item
 - `PDF004`: page count mismatch - BLOCKER
+- `PDF005`: multi-chapter volume boundary is ambiguous - REVIEW
+- `PDF006`: chapter spans are discontinuous, overlapping, or do not cover every source page exactly once - BLOCKER
 - `EPUB001`: reflowable text EPUB - PRESERVE, do not auto-convert
 - `EPUB002`: broken spine or missing resource - BLOCKER
 - `EPUB003`: DRM/encryption detected - BLOCKER
@@ -61,3 +63,4 @@ Use stable codes in `preflight.md` and `plan.json`.
 - `META004`: locked user field would be overwritten - BLOCKER for overwrite
 - `META005`: invalid ComicInfo.xml - SAFE_FIX/REVIEW
 - `META006`: language or direction uncertain - REVIEW
+- `META007`: alternate edition duplicates a primary Kavita chapter identity - REVIEW

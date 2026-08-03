@@ -3,7 +3,7 @@ version: 1
 source: ""
 output: ""
 
-profile: kavita-volume
+profile: kavita-chapter
 mode: auto-safe
 
 language: zh-Hans
@@ -38,6 +38,7 @@ naming:
   series_directory: "{series}"
   volume_file: "{series} v{volume:02}.cbz"
   chapter_file: "{series} Vol.{volume:02} Ch.{chapter:03}.cbz"
+  chapter_file_without_volume: "{series} Ch.{chapter:03}.cbz"
   special_directory: "Specials"
   special_file: "{series} SP{chapter:02} {title}.cbz"
   page_file: "{page:0000}.{extension}"
@@ -58,6 +59,20 @@ pdf:
   jpeg_quality: 92
   avoid_upscaling: true
   preserve_original_pdf: true
+  split_multi_chapter_volumes: true
+  allow_ocr_for_boundaries: false
+  unresolved_boundary_action: needs-review
+
+chapter_packaging:
+  one_chapter_per_cbz: true
+  volume_profile_requires_explicit_request: true
+  require_continuous_chapters: true
+  require_contiguous_page_spans: true
+  require_exact_source_page_coverage: true
+  front_matter: first_chapter
+  end_matter: last_chapter
+  preserve_repeated_release_pages: true
+  alternate_editions_directory: "_Needs Review/Alternate Editions"
 
 epub:
   convert_image_based: true
@@ -77,3 +92,7 @@ validation:
   verify_xml: true
   verify_kavita_layout: true
   create_sha256: true
+  verify_unique_chapter_identity: true
+  verify_one_chapter_per_cbz: true
+  verify_source_page_coverage: true
+  verify_source_hash_unchanged: true

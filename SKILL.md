@@ -1,6 +1,6 @@
 ---
 name: manga-organizer
-description: Automatically inspect, normalize, enrich, convert, package, and export manga folders for Kavita. Use when the user gives a manga folder or asks to organize loose images, PDF, image-based EPUB, CBZ/ZIP/CBR/RAR/7Z; fetch Chinese metadata from Bangumi; write ComicInfo.xml; and produce a verified, non-destructive output library.
+description: Automatically inspect, normalize, enrich, split, convert, package, and export manga folders for Kavita, defaulting to one verified CBZ per chapter. Use when the user gives a manga folder or asks to organize loose images, PDF, image-based EPUB, CBZ/ZIP/CBR/RAR/7Z; fetch Chinese metadata from Bangumi; write ComicInfo.xml; and produce a verified, non-destructive output library.
 ---
 
 # Manga Organizer Skill
@@ -28,7 +28,7 @@ Optional inputs:
 Defaults when the user supplies only a folder:
 
 ```yaml
-profile: kavita-volume
+profile: kavita-chapter
 language: zh-Hans
 reading_direction: rtl
 metadata: bangumi
@@ -60,6 +60,8 @@ Never place the output inside the source tree because that can cause recursive r
 8. Do not claim completion unless generated archives, images, XML, and directory layout have been verified.
 9. Continue processing independent high-confidence items even if some items require review; isolate uncertain items instead of failing the entire batch.
 10. Never use OCR unless filenames, embedded metadata, and directory context are insufficient and the user explicitly permits it.
+11. Default to one chapter per CBZ. Use `kavita-volume` only when the user explicitly requests one CBZ per volume; never infer that choice from a volume-level PDF.
+12. Never package a multi-chapter volume PDF as one CBZ under the default profile. Split it only from validated boundaries, or place it in `_Needs Review` without guessing.
 
 ## 3. Network and proxy rules
 
@@ -120,7 +122,7 @@ Record at least:
 - detected type;
 - size;
 - modified time;
-- hash when useful;
+- SHA-256 before conversion for every source item that may be written to output;
 - page/image count;
 - embedded metadata;
 - candidate series, volume, chapter, language, and group tags;
@@ -134,7 +136,10 @@ Create:
 ```text
 _reports/preflight.md
 _reports/plan.json
+_reports/chapter-boundaries.json
 ```
+
+Include a chapter-split table in preflight for every planned package unit with: source file, volume, chapter, start page, end page, packaged page count, boundary evidence, confidence, and whether it includes front matter, end matter, credits, or release pages. Record every volume-PDF range and its coverage checks in `chapter-boundaries.json`.
 
 Classify every issue as:
 
@@ -163,6 +168,8 @@ At minimum check:
 - image-based/fixed-layout versus reflowable EPUB;
 - missing language or reading direction;
 - low-confidence or multiple Bangumi matches.
+- multi-chapter PDFs without validated chapter boundaries or full one-time page coverage;
+- duplicate chapter identities and alternate language/raw/other editions.
 
 Display a concise summary before processing. In `auto-safe` mode:
 
@@ -196,7 +203,7 @@ Recognize common numbering forms including:
 Group content into:
 
 ```text
-Series -> Volume or Chapter -> Ordered Pages
+Series -> Chapter (with confirmed Volume when known) -> Ordered Pages
 ```
 
 Generate a preview showing:
@@ -210,6 +217,8 @@ Generate a preview showing:
 - estimated size;
 - fixes to be applied;
 - items requiring review.
+
+Under the default `kavita-chapter` profile, plan one CBZ for each numbered chapter. Inputs already containing one chapter per PDF, image-based EPUB, or archive remain one-to-one. If several editions map to the same Kavita `Series`/`Volume`/`Number`, select only the high-confidence primary edition for the library and place every other edition in `_Needs Review/Alternate Editions` with reasons; never overwrite, discard, or assign duplicate identities.
 
 ## 5. Conversion rules
 
@@ -228,15 +237,15 @@ Generate a preview showing:
 Default policy: preserve quality without unnecessary upscaling.
 
 1. Inspect the PDF first.
-2. If each page contains one suitable full-page raster image and extraction preserves the page correctly, prefer lossless extraction.
-3. Otherwise render pages with a reliable PDF renderer.
-4. For `balanced-high-quality`, use a sensible high-quality default such as 240 DPI and JPEG quality around 92, but do not upscale beyond the useful source resolution.
-5. Preserve PNG or another lossless format when transparency or line-art quality requires it.
-6. Respect page rotation and crop boxes.
-7. Process page-by-page to control memory.
-8. Compare PDF page count with output image count.
-9. Keep the source PDF.
-10. Warn that selectable text, links, bookmarks, forms, annotations, and other PDF-only features may not survive conversion.
+2. Determine whether it represents one chapter or a multi-chapter volume. Keep a one-chapter PDF one-to-one; never make a volume PDF one CBZ unless the user explicitly selected `kavita-volume`.
+3. For a multi-chapter volume, identify its chapter range and page spans using the evidence priority and boundary rules in `references/KAVITA_FORMAT.md`. Do not use OCR without explicit permission.
+4. Before conversion, require continuous chapter numbering, contiguous page spans, no overlap, and `sum(end - start + 1) == source PDF page count`. Every source page must be assigned exactly once. If any check fails, move the item to `_Needs Review` instead of guessing.
+5. Assign front cover, contents, and other front matter to the first chapter; assign end matter, credits, release pages, and advertisements to the last chapter. Create a `Specials` item only for a high-confidence independent extra.
+6. Preserve repeated credits, release, and advertisement pages. When reliably identified, mark them `Advertisement` in ComicInfo `Pages` rather than deleting them.
+7. If each page contains one suitable full-page raster image and extraction preserves it correctly, prefer lossless extraction; otherwise render with a reliable PDF renderer.
+8. For `balanced-high-quality`, use a sensible high-quality default such as 240 DPI and JPEG quality around 92 without upscaling beyond useful source resolution. Preserve lossless formats when transparency or line art requires them.
+9. Respect rotation and crop boxes, process page-by-page, and compare each source span with its output image count.
+10. Keep the source PDF and warn that selectable text, links, bookmarks, forms, annotations, and other PDF-only features may not survive conversion.
 
 ### EPUB
 
@@ -244,12 +253,14 @@ Default policy: preserve quality without unnecessary upscaling.
 - Follow the EPUB spine order rather than filename order alone.
 - Read and map OPF metadata.
 - Convert image-based manga EPUBs to CBZ.
+- Keep an EPUB that already represents one chapter as one chapter CBZ.
 - Do not automatically convert reflowable text EPUBs; retain them under `_Preserved EPUB` and report why.
 
 ### Existing archives
 
 - Safely extract CBR/RAR/CB7/7Z/TAR/CBT and repack as CBZ when the selected profile requires CBZ.
 - Normalize existing CBZ files only when needed.
+- Keep archives that already represent one chapter as one chapter CBZ.
 - Preserve unknown ComicInfo.xml fields and user metadata.
 - Never execute files contained in archives.
 
@@ -312,39 +323,12 @@ Every generated CBZ must contain exactly one UTF-8 `ComicInfo.xml` at the archiv
 
 Populate fields when evidence exists:
 
-- `Title`
-- `Series`
-- `LocalizedSeries`
-- `SeriesSort`
-- `Number`
-- `Count`
-- `Volume`
-- `Summary`
-- `Notes`
-- `Year`, `Month`, `Day`
-- `Writer`
-- `Penciller`
-- `Inker`
-- `Colorist`
-- `Letterer`
-- `CoverArtist`
-- `Editor`
-- `Translator`
-- `Publisher`
-- `Imprint`
-- `Genre`
-- `Tags`
-- `Web`
-- `PageCount`
-- `LanguageISO`
-- `Format`
-- `BlackAndWhite`
-- `Manga`
-- `ScanInformation`
-- `AgeRating`
-- `CommunityRating`
-- `GTIN`
-- `Pages` / `ComicPageInfo`
+- identity: `Title`, `Series`, `LocalizedSeries`, `SeriesSort`, `Number`, `Count`, `Volume`;
+- description and date: `Summary`, `Notes`, `Year`, `Month`, `Day`;
+- people: `Writer`, `Penciller`, `Inker`, `Colorist`, `Letterer`, `CoverArtist`, `Editor`, `Translator`;
+- publication and classification: `Publisher`, `Imprint`, `Genre`, `Tags`, `Web`, `AgeRating`, `CommunityRating`, `GTIN`;
+- technical metadata: `PageCount`, `LanguageISO`, `Format`, `BlackAndWhite`, `Manga`, `ScanInformation`;
+- page metadata: `Pages` / `ComicPageInfo`.
 
 Defaults for translated Japanese manga:
 
@@ -357,38 +341,44 @@ Use `zh-Hant` for traditional Chinese. Do not write RTL when the evidence indica
 
 Set `PageCount` from the actual packaged page count. Mark the selected first cover in `Pages`. Preserve unknown XML elements and extension fields when updating existing metadata. Disable external XML entities and never resolve external resources.
 
+For a normal chapter CBZ, set `Series`, `LocalizedSeries`, and `SeriesSort` consistently; set `Number` to the actual chapter, `Volume` only to a confirmed volume, `Count` only when reliable total-chapter evidence exists, and `PageCount` to the actual image count. Preserve `LanguageISO`, `Manga`, and all other evidence-backed metadata. For extras, appendices, and setting material, use an `SP` number with `Format=Special`; never disguise them as numbered chapters.
+
 ## 8. Output profiles
 
-### `kavita-volume` - default
-
-```text
-<output>/
-└── <Series>/
-    ├── <Series> v01.cbz
-    ├── <Series> v02.cbz
-    └── Specials/
-        └── <Series> SP01 <Title>.cbz
-```
-
-### `kavita-chapter`
+### `kavita-chapter` - default
 
 ```text
 <output>/
 └── <Series>/
     ├── <Series> Vol.01 Ch.001.cbz
     ├── <Series> Vol.01 Ch.002.cbz
-    └── <Series> Vol.01 Ch.003.5.cbz
+    ├── <Series> Ch.003.cbz
+    └── Specials/
+        └── <Series> SP01 <Title>.cbz
 ```
+
+Use `<Series> Vol.{volume:02} Ch.{chapter:03}.cbz`; when volume is unknown use `<Series> Ch.{chapter:03}.cbz`.
+
+### `kavita-volume` - explicit opt-in only
+
+```text
+<output>/
+└── <Series>/
+    ├── <Series> v01.cbz
+    └── <Series> v02.cbz
+```
+
+Select this profile only when the user explicitly asks for one CBZ per volume.
 
 ### `standard-cbz`
 
 ```text
 <output>/
-├── <Series> v01.cbz
-└── <Series> v02.cbz
+├── <Series> Ch.001.cbz
+└── <Series> Ch.002.cbz
 ```
 
-This is portable CBZ packaging, not a complete Kavita library root.
+This is portable CBZ packaging, not a complete Kavita library root. Multi-chapter PDFs still split by chapter unless the user explicitly selects `kavita-volume`.
 
 ### `preserve-layout`
 
@@ -426,6 +416,8 @@ Before finalizing each archive:
 10. verify the final filename and path;
 11. compute a SHA-256 checksum.
 
+Across the completed batch, verify that chapter numbers have no unintended gaps or duplicates, every CBZ represents exactly one normal chapter or one identified special, and each source PDF page is covered exactly once. Recompute each source-file SHA-256 and confirm it matches the pre-conversion hash.
+
 For Kavita output, verify that:
 
 - no media files exist directly at the library root;
@@ -443,11 +435,13 @@ The output must include:
 ├── _reports/
 │   ├── preflight.md
 │   ├── plan.json
+│   ├── chapter-boundaries.json
 │   ├── execution-report.md
 │   ├── bangumi-review.csv
 │   ├── skipped-items.csv
 │   └── checksums.sha256
 ├── _Needs Review/
+│   └── Alternate Editions/
 ├── _Preserved EPUB/
 └── <organized series folders>
 ```
@@ -464,6 +458,7 @@ The final report must state:
 - automatic fixes;
 - skipped or quarantined items;
 - validation results;
+- chapter-boundary evidence and source-page coverage results;
 - confirmation that source files were not modified;
 - any unresolved issues.
 
@@ -488,11 +483,14 @@ The task is complete only when:
 - preflight and plan files exist;
 - every completed CBZ passes integrity, XML, and image checks;
 - PDF page counts match generated pages;
+- chapter sequences have no unintended gaps or duplicates and every completed CBZ represents exactly one chapter or identified special;
+- every volume-PDF page is assigned exactly once with no gaps or overlaps, as recorded in `chapter-boundaries.json`;
 - image-based EPUB order follows the spine;
 - Bangumi matches were either high-confidence or left for review;
 - ComicInfo.xml contains actual page count and correct language/direction;
 - Kavita output passes directory-layout checks;
 - checksums and execution report exist;
+- source-file hashes match before and after conversion;
 - no Git operation was performed.
 
 Consult the bundled references for detailed format, metadata, and issue rules.

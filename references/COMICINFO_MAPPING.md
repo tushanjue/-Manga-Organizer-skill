@@ -61,4 +61,13 @@ Do not map every Bangumi person to `Writer`. Preserve the original role in the r
 
 - `PageCount` must equal the actual packaged image count.
 - Use `Pages/ComicPageInfo` to mark `FrontCover`, `Story`, `Advertisement`, `BackCover`, and double-page spreads when known.
+- Preserve repeated credit, release, and advertisement pages; mark a page `Advertisement` only when that classification is reliable.
 - Page image indices are zero-based under common ComicInfo conventions; verify against the current schema and target reader before writing page entries.
+
+## Chapter packaging
+
+- For normal chapter CBZs, set `Number` to the actual chapter and `Volume` only when confirmed.
+- Set `Count` to the series' total chapter count only when supported by reliable evidence.
+- Keep `Series`, `LocalizedSeries`, and `SeriesSort` consistent across the primary edition.
+- Give confirmed extras, appendices, and setting material an `SP` number and `Format=Special`; do not assign them a normal chapter identity.
+- Do not give alternate editions the same Kavita `Series`/`Volume`/`Number` identity as the selected primary library copy.

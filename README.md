@@ -24,7 +24,7 @@ The default behavior is:
 - PDF and image-based EPUB conversion to CBZ;
 - Bangumi metadata matching;
 - ComicInfo.xml generation;
-- Kavita-by-volume output;
+- Kavita-by-chapter output with one CBZ per chapter by default;
 - full validation and reports.
 
 See `examples/USAGE.md` and `templates/manga-organizer.config.yaml` for customization.
