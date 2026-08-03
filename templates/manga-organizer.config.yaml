@@ -1,0 +1,79 @@
+version: 1
+
+source: ""
+output: ""
+
+profile: kavita-volume
+mode: auto-safe
+
+language: zh-Hans
+reading_direction: rtl
+metadata: bangumi
+
+safety:
+  preserve_source: true
+  overwrite_source: false
+  backup_existing_output: true
+  staging_directory: ""
+  stop_on_blocker: true
+
+network:
+  use_session_proxy: true
+  http_proxy: "http://127.0.0.1:17891"
+  https_proxy: "http://127.0.0.1:17891"
+  all_proxy: "socks5://127.0.0.1:17891"
+  timeout_seconds: 30
+  retries: 3
+
+bangumi:
+  enabled: true
+  user_agent: "developer-id/Manga-Organizer-Skill/1.0"
+  access_token_from_environment: BANGUMI_ACCESS_TOKEN
+  auto_match_threshold: 0.92
+  winner_margin: 0.10
+  cache_days: 30
+  cover_policy: library-only
+
+naming:
+  series_directory: "{series}"
+  volume_file: "{series} v{volume:02}.cbz"
+  chapter_file: "{series} Vol.{volume:02} Ch.{chapter:03}.cbz"
+  special_directory: "Specials"
+  special_file: "{series} SP{chapter:02} {title}.cbz"
+  page_file: "{page:0000}.{extension}"
+  sanitize_for_windows: true
+
+images:
+  preserve_original_bytes: true
+  fix_exif_orientation: true
+  detect_duplicates: true
+  detect_spreads: true
+  split_spreads: false
+  split_direction: rtl
+
+pdf:
+  profile: balanced-high-quality
+  prefer_lossless_extraction: true
+  render_dpi: 240
+  jpeg_quality: 92
+  avoid_upscaling: true
+  preserve_original_pdf: true
+
+epub:
+  convert_image_based: true
+  preserve_reflowable: true
+
+comicinfo:
+  preserve_unknown_fields: true
+  language: zh-Hans
+  manga: YesAndRightToLeft
+  include_page_entries: true
+  mark_first_page_as_cover: true
+
+validation:
+  verify_crc: true
+  decode_all_images: true
+  verify_page_count: true
+  verify_xml: true
+  verify_kavita_layout: true
+  create_sha256: true

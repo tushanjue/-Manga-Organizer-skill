@@ -1,0 +1,9 @@
+SKILL.md
+README.md
+manifest.txt
+references/KAVITA_FORMAT.md
+references/COMICINFO_MAPPING.md
+references/ISSUE_CODES.md
+references/BANGUMI_MATCHING.md
+templates/manga-organizer.config.yaml
+examples/USAGE.md
