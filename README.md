@@ -22,7 +22,7 @@ The default behavior is:
 - mandatory preflight;
 - safe automatic fixes;
 - PDF and image-based EPUB conversion to CBZ;
-- Chinese Bangumi titles and summaries without Japanese fallback, while preserving verified creator names;
+- Chinese Bangumi titles, with Japanese-only summaries translated into faithful natural Chinese while preserving verified creator names;
 - ComicInfo.xml generation;
 - Kavita-by-chapter output when boundaries are reliable, with automatic one-CBZ-per-confirmed-volume fallback when they are not;
 - full validation and reports.

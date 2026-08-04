@@ -60,7 +60,7 @@ Do not map every Bangumi person to `Writer`. Preserve the original role in the r
 ## Field language policy
 
 - Read `METADATA_POLICY.md` before creating or updating ComicInfo.
-- Require Chinese in `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, `Summary`, and `Genre`.
+- Require Chinese in `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, `Summary`, and `Genre`; translate only an eligible Japanese `Summary` under `METADATA_POLICY.md`, then validate fidelity, naturalness, and absence of Japanese kana.
 - Format `Publisher` as `中文译名（原文名）` when both reliable, different values exist; an original Japanese name in parentheses is allowed.
 - Validate `Tags` as non-Chinese canonical terms by default, preserve exact `cosplay`, and allow recognized Chinese release tags plus documented user-locked exceptions.
 - Creator-role fields may use an official Japanese name when the person and role mapping is high-confidence and no reliable Chinese form exists.

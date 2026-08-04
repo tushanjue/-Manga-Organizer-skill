@@ -12,7 +12,6 @@ locked user value
 > embedded metadata
 > filename/folder inference
 ```
-
 Never overwrite a locked value. This precedence selects candidates; every final `Tags` value must still pass tag validation. Han tags are allowed only when they are recognized release tags or exact user-locked special allowlist entries.
 
 ## Field language matrix
@@ -21,12 +20,26 @@ Never overwrite a locked value. This precedence selects candidates; every final 
 |---|---|
 | `Series`, `LocalizedSeries`, `SeriesSort` | Use the same reliable Chinese series name. |
 | `Title` | Use a reliable Chinese title. For normal chapters, default to `第{chapter}话`; use reliable Chinese names such as `番外篇` or `特别篇` for specials. |
-| `Summary`, `Genre` | Use reliable Chinese text; never fall back to Japanese or invent a translation. |
+| `Summary` | Prefer reliable Chinese text; otherwise translate a reliable Japanese source under the policy below. |
+| `Genre` | Use reliable Chinese text; never fall back to Japanese or invent a translation. |
 | `Publisher` | Use the bilingual policy below. |
 | `Tags` | Use canonical non-Chinese terms by default, with recognized release-tag and locked-allowlist exceptions. |
 | Creator fields | Reliable official original-language names are allowed. |
 
-Japanese titles and prose are for matching, search, and provenance reports only. If a required Chinese value is unavailable, retain a locked Chinese value or leave it pending with `META008`.
+Japanese titles are for matching, search, and provenance reports only. Japanese prose may be used only as the source of a controlled `Summary` translation. If another required Chinese value is unavailable, retain a locked Chinese value or leave it pending with `META008`.
+
+## Japanese Summary translation
+
+When no reliable Chinese `Summary` exists and the selected work has a reliable Japanese summary, translate it into Chinese automatically. A per-item user lock that explicitly preserves a value still wins.
+
+1. Confirm the Japanese text belongs to the selected series or volume. Do not translate a low-confidence candidate.
+2. Preserve facts, character relationships, chronology, tone, uncertainty, and spoiler level. Do not add explanations, opinions, praise, themes, or promotional claims absent from the source.
+3. Rewrite Japanese syntax into concise, idiomatic Chinese suitable for an editor-written manga synopsis. Prefer direct sentences and natural paragraph flow over sentence-by-sentence literal translation.
+4. Use reliable existing Chinese names for titles, characters, places, organizations, and terminology. If an essential name has no reliable Chinese form and cannot be rephrased without losing meaning, add `META012` and send the Summary to review rather than inventing a name.
+5. Avoid generic AI-style framing and clichés such as `本作讲述了`, `在这个充满……的世界里`, `命运的齿轮开始转动`, `一场……的故事就此展开`, `让我们一起`, `值得一提的是`, or rhetorical questions added by the translator. Do not pad the text with conclusions or moral judgments.
+6. Keep Japanese source text out of `Summary`, `Title`, and other Chinese display fields. Record source language, source provenance, translation status, and any unresolved term in the report.
+7. Perform a second pass for fidelity and naturalness. Reject output that retains Japanese kana, reads like a literal translation, repeats the same idea, uses unnecessary four-character slogans, or contains information not supported by the source.
+If translation or review fails, retain a locked Chinese Summary when available; otherwise leave Summary pending with `META012`. Never silently keep the Japanese synopsis in ComicInfo.
 
 ## Publisher
 

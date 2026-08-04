@@ -271,12 +271,12 @@ Use Bangumi only after local name parsing.
 
 Search with normalized simplified/traditional Chinese titles, Japanese/original titles, aliases, release-tag-stripped titles, and ISBN or subject ID. Use Japanese values for matching evidence only. Before creating or updating ComicInfo for a Chinese library, read and apply `references/METADATA_POLICY.md` after merging sources.
 
-- Require reliable Chinese in `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, `Summary`, and `Genre`. Use a unified Chinese series name; use `第{chapter}话` or a reliable Chinese chapter title for normal chapters, and a reliable Chinese special title for `SP` items.
+- Require reliable Chinese in `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, and `Genre`. Prefer a reliable Chinese `Summary`; when only a reliable Japanese summary exists, translate it into faithful, natural Chinese under `references/METADATA_POLICY.md`. Never translate Japanese titles by default.
 - Format `Publisher` as `中文译名（原文名）` when both reliable, different values exist; do not fabricate or duplicate names.
 - Keep `Tags` non-Chinese by default, but allow recognized Chinese release tags and documented user-locked exceptions; preserve exact `cosplay`.
-- Permit reliable official creator names in their original language. Keep other Japanese originals only for matching and source reports.
+- Permit reliable official creator names in their original language. Except for the controlled Japanese-to-Chinese `Summary` translation, keep other Japanese originals only for matching and source reports.
 
-If a required Chinese value, Publisher component, or reliable canonical tag is unavailable, preserve a locked value or send it to review; never invent or silently translate it.
+If another required Chinese value, Publisher component, or reliable canonical tag is unavailable, preserve a locked value or send it to review; never invent or silently translate it. Treat a per-item explicit user lock as higher priority than automatic summary translation.
 
 Use current official endpoints, including subject search and subject detail endpoints as documented at execution time.
 
@@ -413,7 +413,7 @@ Before finalizing each archive:
 9. confirm no prohibited or accidental files remain;
 10. verify the final filename and path;
 11. compute a SHA-256 checksum.
-12. validate Chinese fields, `Publisher` policy, `Tags` language exceptions, the locked-tag allowlist, and exact retention of pre-existing `cosplay`;
+12. validate Chinese fields, Japanese-summary translation fidelity and naturalness, `Publisher` policy, `Tags` language exceptions, the locked-tag allowlist, and exact retention of pre-existing `cosplay`;
 13. for metadata-only updates, compare member order and per-member SHA-256 before/after and confirm all non-metadata bytes and chapter identity are unchanged.
 
 Across the completed batch, verify that chapter numbers have no unintended gaps or duplicates among chapter-mode items, every CBZ represents exactly one normal chapter, one identified special, or one documented fallback volume, and each source PDF page is covered exactly once. For each fallback volume, verify a confirmed volume identity, no chapter token or fabricated `Number`, natural page order, and complete `1..N` coverage. Recompute each source-file SHA-256 and confirm it matches the pre-conversion hash.
@@ -460,7 +460,7 @@ The final report must state:
 - validation results;
 - chapter-boundary evidence and source-page coverage results;
 - automatic volume fallbacks, including source file, confirmed volume, failed/absent boundary evidence, fallback reason, and full-page coverage result;
-- metadata audit: final Chinese series name, final Publisher, tag normalization mapping, retained special tags with reasons, omitted/review tags, and whether images remained byte-identical;
+- metadata audit: final Chinese series name, Summary source language and translation status, final Publisher, tag normalization mapping, retained special tags with reasons, omitted/review tags, and whether images remained byte-identical;
 - confirmation that source files were not modified;
 - any unresolved issues.
 

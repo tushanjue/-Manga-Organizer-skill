@@ -65,7 +65,8 @@ Use stable codes in `preflight.md` and `plan.json`.
 - `META005`: invalid ComicInfo.xml - SAFE_FIX/REVIEW
 - `META006`: language or direction uncertain - REVIEW
 - `META007`: alternate edition duplicates a primary Kavita chapter identity - REVIEW
-- `META008`: a Chinese-required Bangumi field lacks a reliable Chinese value or would require Japanese fallback - REVIEW
+- `META008`: a Chinese-required non-Summary field lacks a reliable Chinese value or would require Japanese fallback - REVIEW
 - `META009`: Publisher bilingual components are incomplete, unreliable, or incorrectly formatted - REVIEW
 - `META010`: tag contains unapproved Han text outside recognized release tags/allowlist or lacks a reliable canonical value - REVIEW
 - `META011`: protected `cosplay` or a user-locked allowlist tag was lost or changed - BLOCKER
+- `META012`: Japanese Summary translation is unreliable, unnatural, contains unsupported additions or unresolved names, or retains Japanese display text - REVIEW

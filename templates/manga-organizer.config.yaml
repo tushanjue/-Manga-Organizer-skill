@@ -38,9 +38,9 @@ bangumi:
   require_chinese_title_fields: true
   allow_japanese_title_fallback: false
   allow_japanese_creator_names: true
-  allow_machine_translation: false
+  allow_title_translation: false
   original_title_policy: report-only
-  missing_chinese_action: needs-review
+  missing_non_summary_chinese_action: needs-review
   user_agent: "developer-id/Manga-Organizer-Skill/1.0"
   access_token_from_environment: BANGUMI_ACCESS_TOKEN
   auto_match_threshold: 0.92
@@ -51,6 +51,16 @@ bangumi:
 metadata_policy:
   chinese_fields: [Series, LocalizedSeries, SeriesSort, Title, Summary, Genre]
   normal_chapter_title: "第{chapter}话"
+  summary_translation:
+    japanese_when_chinese_missing: true
+    style: natural-editorial-chinese
+    preserve_facts_and_spoiler_level: true
+    forbid_unsupported_additions: true
+    forbid_ai_style_cliches: true
+    forbid_japanese_kana_in_output: true
+    require_fidelity_and_naturalness_review: true
+    record_source_provenance: true
+    unresolved_action: needs-review
   publisher:
     format: "{zh}（{original}）"
     use_fullwidth_parentheses: true
@@ -135,6 +145,9 @@ validation:
   verify_source_page_coverage: true
   verify_source_hash_unchanged: true
   verify_chinese_title_fields: true
+  verify_summary_translation_fidelity: true
+  verify_summary_translation_naturalness: true
+  verify_no_japanese_kana_in_summary: true
   verify_publisher_policy: true
   verify_tag_language_policy: true
   verify_protected_tags: true

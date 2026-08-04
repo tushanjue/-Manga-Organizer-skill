@@ -17,16 +17,16 @@ Try, in order:
 5. ISBN/GTIN;
 6. manually supplied subject ID.
 
-Japanese/original titles and prose are matching evidence only; they are not valid fallbacks for Chinese-required fields. Verified creator names follow the explicit exception below.
+Japanese/original titles are matching evidence only. Japanese prose may also serve as the source for the controlled `Summary` translation in `METADATA_POLICY.md`. Verified creator names follow the explicit exception below.
 
 ## Field application
 
 - Default to simplified Chinese (`zh-Hans`); use traditional Chinese (`zh-Hant`) when configured.
 - Prefer the current API's Chinese-localized field such as `name_cn`, followed by a verified Chinese alias or existing locked Chinese metadata. Treat the original `name`, kana, and Japanese aliases as match/provenance data only.
-- Require Chinese in `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, `Summary`, and `Genre`.
-- Allow official Japanese creator names in evidence-backed role fields such as `Writer`, `Penciller`, and `CoverArtist` when no reliable Chinese form exists; this exception never applies to titles or summaries.
+- Require Chinese in `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, `Summary`, and `Genre`; when no reliable Chinese `Summary` exists, translate a reliable Japanese summary into natural Chinese under `METADATA_POLICY.md`.
+- Allow official Japanese creator names in evidence-backed role fields such as `Writer`, `Penciller`, and `CoverArtist` when no reliable Chinese form exists; this exception never applies to titles, while `Summary` uses only the controlled translation exception.
 - Apply bilingual `Publisher` and `Tags` rules from `METADATA_POLICY.md`, including recognized release-tag exceptions; never copy other Bangumi Chinese tags directly without validation.
-- If a required value is unavailable, preserve a locked value or send it to review; do not invent or silently translate it.
+- Do not translate titles or other missing display fields. Translate only an eligible Japanese `Summary`; if it cannot pass fidelity and naturalness review, preserve a locked value or send it to review.
 
 ## High-confidence evidence
 

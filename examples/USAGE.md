@@ -7,7 +7,7 @@
 /Volumes/漫画/待整理
 ```
 
-The skill will use the default Kavita-by-chapter profile, produce one CBZ per chapter when boundaries are reliable, automatically fall back to one CBZ per confirmed volume when they are not, preserve source files, perform preflight, require Chinese Bangumi titles and summaries without Japanese fallback, preserve verified creator names, write ComicInfo.xml, and validate the output.
+The skill will use the default Kavita-by-chapter profile, produce one CBZ per chapter when boundaries are reliable, automatically fall back to one CBZ per confirmed volume when they are not, preserve source files, perform preflight, keep titles Chinese, translate Japanese-only summaries into natural editorial Chinese, preserve verified creator names, write ComicInfo.xml, and validate the output.
 
 ## Specify destination
 
@@ -38,6 +38,12 @@ The skill will use the default Kavita-by-chapter profile, produce one CBZ per ch
 
 ```text
 只更新现有 CBZ 的 ComicInfo.xml：系列名和话名使用中文，Publisher 使用“史克威尔艾尼克斯（スクウェア・エニックス）”，保留 cosplay，不改动图片、页序或章节编号。
+```
+
+## Japanese summary translation
+
+```text
+Bangumi 只有日文简介时，忠实翻译成简洁自然的中文，不要直译腔、宣传套话或 AI 腔；不要翻译日文标题。
 ```
 
 ## Custom profile
