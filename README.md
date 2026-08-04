@@ -24,7 +24,7 @@ The default behavior is:
 - PDF and image-based EPUB conversion to CBZ;
 - Chinese Bangumi titles and summaries without Japanese fallback, while preserving verified creator names;
 - ComicInfo.xml generation;
-- Kavita-by-chapter output with one CBZ per chapter by default;
+- Kavita-by-chapter output when boundaries are reliable, with automatic one-CBZ-per-confirmed-volume fallback when they are not;
 - full validation and reports.
 
 See `examples/USAGE.md` and `templates/manga-organizer.config.yaml` for customization.

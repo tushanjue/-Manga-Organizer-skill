@@ -1,6 +1,6 @@
 ---
 name: manga-organizer
-description: Automatically inspect, normalize, enrich, split, convert, package, and export manga folders for Kavita, defaulting to one verified CBZ per chapter. Use when the user gives a manga folder or asks to organize loose images, PDF, image-based EPUB, CBZ/ZIP/CBR/RAR/7Z; fetch Chinese metadata from Bangumi; write ComicInfo.xml; and produce a verified, non-destructive output library.
+description: Automatically inspect, normalize, enrich, split, convert, package, and export manga folders for Kavita, preferring one verified CBZ per chapter and falling back to one CBZ per confirmed volume when chapter boundaries are unclear. Use when the user gives a manga folder or asks to organize loose images, PDF, image-based EPUB, CBZ/ZIP/CBR/RAR/7Z; fetch Chinese metadata from Bangumi; write ComicInfo.xml; and produce a verified, non-destructive output library.
 ---
 
 # Manga Organizer Skill
@@ -60,8 +60,8 @@ Never place the output inside the source tree because that can cause recursive r
 8. Do not claim completion unless generated archives, images, XML, and directory layout have been verified.
 9. Continue processing independent high-confidence items even if some items require review; isolate uncertain items instead of failing the entire batch.
 10. Never use OCR unless filenames, embedded metadata, and directory context are insufficient and the user explicitly permits it.
-11. Default to one chapter per CBZ. Use `kavita-volume` only when the user explicitly requests one CBZ per volume; never infer that choice from a volume-level PDF.
-12. Never package a multi-chapter volume PDF as one CBZ under the default profile. Split it only from validated boundaries, or place it in `_Needs Review` without guessing.
+11. Prefer one chapter per CBZ. Use `kavita-volume` globally when the user explicitly requests it; otherwise apply it only as an automatic per-file fallback for a confirmed volume whose chapter boundaries cannot be identified reliably.
+12. Never guess chapter splits. After exhausting allowed boundary evidence, package an unsplittable but complete, clearly identified volume as one volume CBZ; use `_Needs Review` only when the volume identity, file integrity, or complete page coverage is also uncertain.
 13. When updating an existing output library, modify metadata only: preserve source files, chapter identity, page order, and every non-metadata member byte; back up first, work in staging, validate, then atomically replace.
 
 ## 3. Network and proxy rules
@@ -140,7 +140,7 @@ _reports/plan.json
 _reports/chapter-boundaries.json
 ```
 
-Include a chapter-split table in preflight for every planned package unit with: source file, volume, chapter, start page, end page, packaged page count, boundary evidence, confidence, and whether it includes front matter, end matter, credits, or release pages. Record every volume-PDF range and its coverage checks in `chapter-boundaries.json`.
+Include a chapter-split table in preflight for every planned package unit with: source file, volume, chapter, packaging mode, start page, end page, packaged page count, boundary evidence, confidence, fallback reason, and whether it includes front matter, end matter, credits, or release pages. For a volume fallback, set chapter to null and record the full `1..N` span. Record every volume-PDF range, fallback decision, and coverage check in `chapter-boundaries.json`.
 
 Classify every issue as:
 
@@ -169,7 +169,7 @@ At minimum check:
 - image-based/fixed-layout versus reflowable EPUB;
 - missing language or reading direction;
 - low-confidence or multiple Bangumi matches.
-- multi-chapter PDFs without validated chapter boundaries or full one-time page coverage;
+- whether each multi-chapter PDF has validated chapter boundaries or qualifies for a documented confirmed-volume fallback with full one-time page coverage;
 - duplicate chapter identities and alternate language/raw/other editions.
 
 Display a concise summary before processing. In `auto-safe` mode:
@@ -204,7 +204,7 @@ Recognize common numbering forms including:
 Group content into:
 
 ```text
-Series -> Chapter (with confirmed Volume when known) -> Ordered Pages
+Series -> Package Unit (Chapter, Special, or confirmed fallback Volume) -> Ordered Pages
 ```
 
 Generate a preview showing:
@@ -219,7 +219,7 @@ Generate a preview showing:
 - fixes to be applied;
 - items requiring review.
 
-Under the default `kavita-chapter` profile, plan one CBZ for each numbered chapter. Inputs already containing one chapter per PDF, image-based EPUB, or archive remain one-to-one. If several editions map to the same Kavita `Series`/`Volume`/`Number`, select only the high-confidence primary edition for the library and place every other edition in `_Needs Review/Alternate Editions` with reasons; never overwrite, discard, or assign duplicate identities.
+Under the default `kavita-chapter` profile, plan one CBZ for each numbered chapter when boundaries are reliable. Inputs already containing one chapter per PDF, image-based EPUB, or archive remain one-to-one. If a multi-chapter file is a clearly identified complete volume but has no reliable chapter division, automatically plan one documented volume CBZ for that file. If several editions map to the same Kavita `Series`/`Volume`/`Number`, select only the high-confidence primary edition for the library and place every other edition in `_Needs Review/Alternate Editions` with reasons; never overwrite, discard, or assign duplicate identities.
 
 ## 5. Conversion rules
 
@@ -238,10 +238,10 @@ Under the default `kavita-chapter` profile, plan one CBZ for each numbered chapt
 Default policy: preserve quality without unnecessary upscaling.
 
 1. Inspect the PDF first.
-2. Determine whether it represents one chapter or a multi-chapter volume. Keep a one-chapter PDF one-to-one; never make a volume PDF one CBZ unless the user explicitly selected `kavita-volume`.
+2. Determine whether it represents one chapter or a multi-chapter volume. Keep a one-chapter PDF one-to-one. For a multi-chapter volume, prefer chapter splitting but permit the automatic volume fallback below.
 3. For a multi-chapter volume, identify its chapter range and page spans using the evidence priority and boundary rules in `references/KAVITA_FORMAT.md`. Do not use OCR without explicit permission.
-4. Before conversion, require continuous chapter numbering, contiguous page spans, no overlap, and `sum(end - start + 1) == source PDF page count`. Every source page must be assigned exactly once. If any check fails, move the item to `_Needs Review` instead of guessing.
-5. Assign front cover, contents, and other front matter to the first chapter; assign end matter, credits, release pages, and advertisements to the last chapter. Create a `Specials` item only for a high-confidence independent extra.
+4. Split by chapter only when chapter numbering is continuous, page spans are contiguous and non-overlapping, and `sum(end - start + 1) == source PDF page count`. If reliable chapter divisions remain unavailable, automatically package the complete file as one volume CBZ when its series and volume identity are high-confidence, every page is readable, and the full `1..N` span is covered exactly once. Do not fabricate chapter numbers. If those fallback conditions fail, move the item to `_Needs Review`.
+5. When splitting, assign front cover, contents, and other front matter to the first chapter; assign end matter, credits, release pages, and advertisements to the last chapter. In volume fallback mode, retain all pages once in source order. Create a `Specials` item only for a high-confidence independent extra.
 6. Preserve repeated credits, release, and advertisement pages. When reliably identified, mark them `Advertisement` in ComicInfo `Pages` rather than deleting them.
 7. If each page contains one suitable full-page raster image and extraction preserves it correctly, prefer lossless extraction; otherwise render with a reliable PDF renderer.
 8. For `balanced-high-quality`, use a sensible high-quality default such as 240 DPI and JPEG quality around 92 without upscaling beyond useful source resolution. Preserve lossless formats when transparency or line art requires them.
@@ -343,7 +343,7 @@ For metadata-only updates, change only the root `ComicInfo.xml`. Preserve archiv
 
 ## 8. Output profiles
 
-### `kavita-chapter` - default
+### `kavita-chapter` - default, with volume fallback
 
 ```text
 <output>/
@@ -355,9 +355,9 @@ For metadata-only updates, change only the root `ComicInfo.xml`. Preserve archiv
         └── <Series> SP01 <Title>.cbz
 ```
 
-Use `<Series> Vol.{volume:02} Ch.{chapter:03}.cbz`; when volume is unknown use `<Series> Ch.{chapter:03}.cbz`.
+Use `<Series> Vol.{volume:02} Ch.{chapter:03}.cbz`; when volume is unknown use `<Series> Ch.{chapter:03}.cbz`. When a confirmed multi-chapter volume has no reliable chapter divisions, automatically emit `<Series> v{volume:02}.cbz` and record `packaging_mode: volume-fallback` instead of guessing splits.
 
-### `kavita-volume` - explicit opt-in only
+### `kavita-volume` - explicit global profile or automatic per-file fallback
 
 ```text
 <output>/
@@ -366,7 +366,7 @@ Use `<Series> Vol.{volume:02} Ch.{chapter:03}.cbz`; when volume is unknown use `
     └── <Series> v02.cbz
 ```
 
-Select this profile only when the user explicitly asks for one CBZ per volume.
+Select this profile globally only when the user explicitly asks for one CBZ per volume. The default chapter profile may still apply the same layout to an individual confirmed volume when chapter boundaries are unavailable.
 
 ### `standard-cbz`
 
@@ -376,7 +376,7 @@ Select this profile only when the user explicitly asks for one CBZ per volume.
 └── <Series> Ch.002.cbz
 ```
 
-This is portable CBZ packaging, not a complete Kavita library root. Multi-chapter PDFs still split by chapter unless the user explicitly selects `kavita-volume`.
+This is portable CBZ packaging, not a complete Kavita library root. Prefer chapter splitting for multi-chapter PDFs, but use the documented confirmed-volume fallback when reliable boundaries are unavailable.
 
 ### `preserve-layout`
 
@@ -416,7 +416,7 @@ Before finalizing each archive:
 12. validate Chinese fields, `Publisher` policy, `Tags` language exceptions, the locked-tag allowlist, and exact retention of pre-existing `cosplay`;
 13. for metadata-only updates, compare member order and per-member SHA-256 before/after and confirm all non-metadata bytes and chapter identity are unchanged.
 
-Across the completed batch, verify that chapter numbers have no unintended gaps or duplicates, every CBZ represents exactly one normal chapter or one identified special, and each source PDF page is covered exactly once. Recompute each source-file SHA-256 and confirm it matches the pre-conversion hash.
+Across the completed batch, verify that chapter numbers have no unintended gaps or duplicates among chapter-mode items, every CBZ represents exactly one normal chapter, one identified special, or one documented fallback volume, and each source PDF page is covered exactly once. For each fallback volume, verify a confirmed volume identity, no chapter token or fabricated `Number`, natural page order, and complete `1..N` coverage. Recompute each source-file SHA-256 and confirm it matches the pre-conversion hash.
 
 For Kavita output, verify that:
 
@@ -459,6 +459,7 @@ The final report must state:
 - skipped or quarantined items;
 - validation results;
 - chapter-boundary evidence and source-page coverage results;
+- automatic volume fallbacks, including source file, confirmed volume, failed/absent boundary evidence, fallback reason, and full-page coverage result;
 - metadata audit: final Chinese series name, final Publisher, tag normalization mapping, retained special tags with reasons, omitted/review tags, and whether images remained byte-identical;
 - confirmation that source files were not modified;
 - any unresolved issues.
@@ -484,9 +485,9 @@ The task is complete only when:
 - preflight and plan files exist;
 - every completed CBZ passes integrity, XML, and image checks;
 - PDF page counts match generated pages;
-- every normal chapter has exactly one CBZ, while specials use `SP` and `Format=Special`;
-- chapter sequences have no unintended gaps or duplicates and every completed CBZ represents exactly one chapter or identified special;
-- every volume-PDF page is assigned exactly once with no gaps or overlaps, as recorded in `chapter-boundaries.json`;
+- every reliably bounded normal chapter has exactly one CBZ, while specials use `SP` and `Format=Special`;
+- chapter sequences have no unintended gaps or duplicates, and every completed CBZ represents exactly one chapter, one identified special, or one documented confirmed-volume fallback with no fabricated chapter identity;
+- every volume-PDF page is assigned exactly once with no gaps or overlaps, while each fallback preserves natural order and complete source coverage, as recorded in `chapter-boundaries.json`;
 - image-based EPUB order follows the spine;
 - Chinese title fields, Publisher policy, Tags policy, protected tags, and user-locked metadata pass `references/METADATA_POLICY.md` or are explicitly left for review;
 - ComicInfo.xml contains actual page count and correct language/direction;

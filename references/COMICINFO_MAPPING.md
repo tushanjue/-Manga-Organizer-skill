@@ -76,6 +76,7 @@ Do not map every Bangumi person to `Writer`. Preserve the original role in the r
 ## Chapter packaging
 
 - For normal chapter CBZs, set `Number` to the actual chapter and `Volume` only when confirmed.
+- For an automatic volume fallback, omit `Number`, set the confirmed `Volume`, use a reliable Chinese volume `Title` such as `第{volume}卷`, and set `PageCount` to the complete packaged image count; never fabricate chapter identity or mark the volume as `Special`.
 - Set `Count` to the series' total chapter count only when supported by reliable evidence.
 - Keep `Series`, `LocalizedSeries`, and `SeriesSort` consistent across the primary edition.
 - Give confirmed extras, appendices, and setting material an `SP` number and `Format=Special`; do not assign them a normal chapter identity.

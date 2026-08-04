@@ -50,8 +50,8 @@ Use stable codes in `preflight.md` and `plan.json`.
 - `PDF002`: PDF contains text/bookmarks/links that CBZ will not preserve - WARNING
 - `PDF003`: PDF page render failed - BLOCKER for affected page/item
 - `PDF004`: page count mismatch - BLOCKER
-- `PDF005`: multi-chapter volume boundary is ambiguous - REVIEW
-- `PDF006`: chapter spans are discontinuous, overlapping, or do not cover every source page exactly once - BLOCKER
+- `PDF005`: multi-chapter volume boundary is ambiguous - WARNING with documented automatic volume fallback when volume identity, integrity, and exact full-page coverage are confirmed; otherwise REVIEW
+- `PDF006`: selected chapter-split spans are discontinuous, overlapping, or do not cover every source page exactly once - BLOCKER for chapter splitting; use the verified volume fallback when eligible, otherwise REVIEW/BLOCKER
 - `EPUB001`: reflowable text EPUB - PRESERVE, do not auto-convert
 - `EPUB002`: broken spine or missing resource - BLOCKER
 - `EPUB003`: DRM/encryption detected - BLOCKER

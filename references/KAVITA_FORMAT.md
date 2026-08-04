@@ -16,7 +16,7 @@ Library Root/
         └── Series Name SP01 Artbook.cbz
 ```
 
-Use one chapter per CBZ by default. Use the volume layout only when the user explicitly asks for one CBZ per volume:
+Prefer one chapter per CBZ. Use the volume layout when the user explicitly asks for one CBZ per volume or when an individual confirmed volume has no reliable chapter boundaries:
 
 ```text
 Library Root/
@@ -51,7 +51,7 @@ Series Name Vol.01 Ch.001.cbz
 
 ## Multi-chapter volume PDFs
 
-Never package a multi-chapter volume PDF as one CBZ under the default profile. Before conversion, identify the volume's chapter range and produce a split table containing source file, volume, chapter, inclusive start/end pages, packaged page count, boundary evidence, confidence, and front/end matter, credits, or release-page flags.
+First attempt chapter-level packaging. Before conversion, identify the volume's chapter range and produce a split table containing source file, volume, chapter, packaging mode, inclusive start/end pages, packaged page count, boundary evidence, confidence, fallback reason, and front/end matter, credits, or release-page flags.
 
 Use boundary evidence in this order:
 
@@ -61,9 +61,20 @@ Use boundary evidence in this order:
 4. local structural evidence such as page-size changes, chapter title pages, and repeated release pages;
 5. OCR only with the user's explicit permission.
 
-Require continuous numbered chapters, contiguous page spans, no overlaps, and `sum(end - start + 1) == source PDF page count`. Assign every source page exactly once. If any condition fails, do not guess: move the volume to `_Needs Review` and record the failure in `_reports/chapter-boundaries.json`.
+When reliable boundaries exist, require continuous numbered chapters, contiguous page spans, no overlaps, and `sum(end - start + 1) == source PDF page count`. Assign every source page exactly once.
 
-Assign front cover, contents, and other front matter to the volume's first chapter. Assign end matter, credits, release pages, and advertisements to the last chapter. Keep repeated credit, release, and advertisement pages; mark reliably identified advertisement pages as `Advertisement` in ComicInfo `Pages`. Split out a `Specials` item only when it is a high-confidence independent extra.
+If reliable chapter boundaries remain unavailable after checking allowed evidence, automatically fall back to one volume CBZ only when all of these conditions hold:
+
+1. the file is high-confidence evidence for exactly one series and one confirmed volume;
+2. the volume number is known and there is no evidence that the file mixes volumes;
+3. every source page is readable and the full `1..N` range can be packaged exactly once in natural order;
+4. the archive passes the normal integrity, image, ComicInfo, and checksum validations.
+
+Name the fallback `<Series> v{volume:02}.cbz`. In ComicInfo, set the confirmed `Volume`, omit `Number`, use a reliable Chinese volume title such as `第{volume}卷`, and set the actual `PageCount`. Do not invent chapter ranges or numbers. In `_reports/chapter-boundaries.json`, set `packaging_mode` to `volume-fallback`, set chapter to null, record attempted evidence and the fallback reason, and verify the single `1..N` span equals the source page count.
+
+If the volume identity, file integrity, or full-page coverage is uncertain, move the item to `_Needs Review`; automatic fallback does not authorize guessing those facts.
+
+When splitting, assign front cover, contents, and other front matter to the volume's first chapter. Assign end matter, credits, release pages, and advertisements to the last chapter. In volume fallback mode, retain all pages once in source order. Keep repeated credit, release, and advertisement pages; mark reliably identified advertisement pages as `Advertisement` in ComicInfo `Pages`. Split out a `Specials` item only when it is a high-confidence independent extra.
 
 Inputs already representing one chapter per PDF, image-based EPUB, or archive remain one-to-one chapter CBZs.
 
@@ -71,9 +82,11 @@ Inputs already representing one chapter per PDF, image-based EPUB, or archive re
 
 For metadata-only updates, keep the existing CBZ's images, other non-metadata members, member order, page order, and chapter identity unchanged. Create a backup, build and validate the candidate in staging, compare per-member hashes, then atomically replace the output. See `METADATA_POLICY.md`.
 
-## Chapter ComicInfo
+## Package ComicInfo
 
 Set `Series`, `LocalizedSeries`, and `SeriesSort` consistently; `Number` to the actual chapter; `Volume` only to a confirmed volume; `Count` only from reliable total-chapter evidence; and `PageCount` to the actual packaged image count. Retain evidence-backed `LanguageISO`, `Manga`, and other metadata.
+
+For a volume fallback, omit `Number`, set the confirmed `Volume`, use a reliable Chinese volume title, and keep the full source page count. Do not mark a fallback volume as `Special`.
 
 ## Common volume markers
 

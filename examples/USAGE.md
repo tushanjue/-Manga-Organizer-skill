@@ -7,7 +7,7 @@
 /Volumes/漫画/待整理
 ```
 
-The skill will use the default Kavita-by-chapter profile, produce one CBZ per chapter, preserve source files, perform preflight, require Chinese Bangumi titles and summaries without Japanese fallback, preserve verified creator names, write ComicInfo.xml, and validate the output.
+The skill will use the default Kavita-by-chapter profile, produce one CBZ per chapter when boundaries are reliable, automatically fall back to one CBZ per confirmed volume when they are not, preserve source files, perform preflight, require Chinese Bangumi titles and summaries without Japanese fallback, preserve verified creator names, write ComicInfo.xml, and validate the output.
 
 ## Specify destination
 
@@ -19,7 +19,7 @@ The skill will use the default Kavita-by-chapter profile, produce one CBZ per ch
 ## Multi-chapter volume PDFs
 
 ```text
-把 D:\MangaInbox 中的卷级 PDF 按话拆分，每话一个 CBZ。先显示章节拆分表，无法验证完整页面覆盖时放入 _Needs Review。
+把 D:\MangaInbox 中的卷级 PDF 优先按话拆分，每话一个 CBZ。先显示章节拆分表；没有可靠话级边界但卷号明确时，自动按卷生成一个 CBZ 并报告回退原因。
 ```
 
 ## Explicit volume-based library

@@ -92,11 +92,16 @@ pdf:
   preserve_original_pdf: true
   split_multi_chapter_volumes: true
   allow_ocr_for_boundaries: false
-  unresolved_boundary_action: needs-review
+  unresolved_boundary_action: fallback-volume
+  fallback_requires_confirmed_volume_identity: true
+  fallback_requires_exact_source_page_coverage: true
+  fallback_preserve_natural_page_order: true
 
 chapter_packaging:
-  one_chapter_per_cbz: true
-  volume_profile_requires_explicit_request: true
+  one_chapter_per_cbz_when_boundaries_reliable: true
+  global_volume_profile_requires_explicit_request: true
+  automatic_volume_fallback: true
+  fallback_omit_chapter_number: true
   require_continuous_chapters: true
   require_contiguous_page_spans: true
   require_exact_source_page_coverage: true
@@ -124,7 +129,9 @@ validation:
   verify_kavita_layout: true
   create_sha256: true
   verify_unique_chapter_identity: true
-  verify_one_chapter_per_cbz: true
+  verify_one_package_unit_per_cbz: true
+  allow_documented_volume_fallback: true
+  verify_volume_fallback_identity: true
   verify_source_page_coverage: true
   verify_source_hash_unchanged: true
   verify_chinese_title_fields: true
