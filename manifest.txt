@@ -1,10 +1,15 @@
 SKILL.md
-README.md
 manifest.txt
 references/KAVITA_FORMAT.md
+references/IDENTITY_REORGANIZATION.md
+references/RESUME_AND_RECOVERY.md
 references/COMICINFO_MAPPING.md
 references/ISSUE_CODES.md
 references/BANGUMI_MATCHING.md
 references/METADATA_POLICY.md
 templates/manga-organizer.config.yaml
 examples/USAGE.md
+agents/openai.yaml
+scripts/cbz_transform.py
+scripts/library_state.py
+scripts/synthetic_acceptance.py

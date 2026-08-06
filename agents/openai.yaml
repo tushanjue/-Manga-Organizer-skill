@@ -1,0 +1,4 @@
+interface:
+  display_name: "Manga Organizer"
+  short_description: "Safely organize and normalize Kavita manga libraries"
+  default_prompt: "Use $manga-organizer to preflight this manga source, choose a series-wide Kavita identity policy, and build or normalize it non-destructively with resumable validation."

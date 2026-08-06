@@ -73,11 +73,19 @@ Do not map every Bangumi person to `Writer`. Preserve the original role in the r
 - Preserve repeated credit, release, and advertisement pages; mark a page `Advertisement` only when that classification is reliable.
 - Page image indices are zero-based under common ComicInfo conventions; verify against the current schema and target reader before writing page entries.
 
-## Chapter packaging
+## Series identity mapping
 
-- For normal chapter CBZs, set `Number` to the actual chapter and `Volume` only when confirmed.
-- For an automatic volume fallback, omit `Number`, set the confirmed `Volume`, use a reliable Chinese volume `Title` such as `第{volume}卷`, and set `PageCount` to the complete packaged image count; never fabricate chapter identity or mark the volume as `Special`.
-- Set `Count` to the series' total chapter count only when supported by reliable evidence.
-- Keep `Series`, `LocalizedSeries`, and `SeriesSort` consistent across the primary edition.
-- Give confirmed extras, appendices, and setting material an `SP` number and `Format=Special`; do not assign them a normal chapter identity.
-- Do not give alternate editions the same Kavita `Series`/`Volume`/`Number` identity as the selected primary library copy.
+- `continuous-chapter`: set actual `Number`; omit `Volume`; store confirmed source volume in `Notes` and provenance reports.
+- `volume-aware-chapter`: set actual `Number` and confirmed `Volume`; use only after explicit user selection.
+- `volume-only` or documented fallback: omit `Number`; set confirmed `Volume`; use a reliable Chinese volume `Title`; never mark it `Special`.
+- Special: use `Number=SPxx`, `Format=Special`, reliable Chinese `Title`, and the main series' `Series`, `LocalizedSeries`, and `SeriesSort`.
+- Set `Count` only from reliable series-level total chapter evidence. Never use it to hide a real gap.
+- Never give an alternate edition the same formal-library identity as the selected primary copy.
+
+## Existing-library updates
+
+For `metadata-refresh`, preserve filename, directory, `Series`, `LocalizedSeries`, `SeriesSort`, `Volume`, `Number`, and `Format`; update only non-identity metadata.
+
+For explicitly authorized `identity-normalization`, change only planned identity fields and `Title`. Preserve unknown XML fields unless they conflict with the confirmed new identity. Preserve every non-ComicInfo member byte and archive member order, and write before/after identity plus member hashes to the required audit.
+
+Reject `DOCTYPE` or entity declarations before parsing. Keep exactly one UTF-8 `ComicInfo.xml` at archive root and never resolve external resources.

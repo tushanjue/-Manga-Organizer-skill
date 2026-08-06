@@ -1,59 +1,49 @@
 # Usage examples
 
-## Simplest request
+## New continuous-chapter library
 
 ```text
-使用 manga-organizer 整理这个文件夹：
-/Volumes/漫画/待整理
+使用 $manga-organizer 整理这个文件夹，按 continuous-chapter 输出；正常章节统一为 Ch.xxx，不把来源卷号写入 Kavita Volume。
 ```
 
-The skill will use the default Kavita-by-chapter profile, produce one CBZ per chapter when boundaries are reliable, automatically fall back to one CBZ per confirmed volume when they are not, preserve source files, perform preflight, keep titles Chinese, translate Japanese-only summaries into natural editorial Chinese, preserve verified creator names, write ComicInfo.xml, and validate the output.
-
-## Specify destination
+## Verified volume fallback
 
 ```text
-整理 /Users/me/Downloads/漫画，输出到 /Volumes/NAS/Kavita/漫画。
-先显示问题报告；无阻断问题时自动继续。
+优先按章节拆分；完整且卷号明确但找不到可靠边界的卷按 vXX.cbz 收录，列出尝试过的证据和全页覆盖结果。
 ```
 
-## Multi-chapter volume PDFs
+## Repair Kavita volume jumps
 
 ```text
-把 D:\MangaInbox 中的卷级 PDF 优先按话拆分，每话一个 CBZ。先显示章节拆分表；没有可靠话级边界但卷号明确时，自动按卷生成一个 CBZ 并报告回退原因。
+对现有 Manga Organizer Output 做 identity-normalization：清除正常章节中造成跳卷的部分 Volume 身份，保留 Number 和来源卷号审计；图片及非 XML 成员不得改变。
 ```
 
-## Explicit volume-based library
+## Merge official companion material
 
 ```text
-我明确需要每卷一个 CBZ：把 D:\MangaInbox 按 kavita-volume 整理。
+把高置信官方选集并入主系列 Specials，先做字节哈希、感知哈希和视觉去重；保留所有唯一页面并报告未收录页面。
 ```
 
-## No network metadata
+## Preserve real gaps and ignored damage
 
 ```text
-整理 ~/漫画/待处理，只使用现有 ComicInfo.xml 和文件名，不访问 Bangumi。
+缺少源文件的章节保持空缺，不重编号也不生成占位；我确认忽略的损坏项目保留源文件和审阅副本，不阻塞其他内容。
 ```
 
-## Metadata-only library update
+## Pause and resume
 
 ```text
-只更新现有 CBZ 的 ComicInfo.xml：系列名和话名使用中文，Publisher 使用“史克威尔艾尼克斯（スクウェア・エニックス）”，保留 cosplay，不改动图片、页序或章节编号。
+完成当前归档后暂停并写入持久 resume-state.json；下次从最后完成单元继续，不重复询问已确认的 OCR 权限、边界和主版本。
 ```
 
-## Japanese summary translation
+## Metadata refresh only
 
 ```text
-Bangumi 只有日文简介时，忠实翻译成简洁自然的中文，不要直译腔、宣传套话或 AI 腔；不要翻译日文标题。
+只做 metadata-refresh：不得改文件名、目录或 Series/Volume/Number/Format，不得改变图片、其他成员或成员顺序。
 ```
 
-## Custom profile
+## Review without mutation
 
 ```text
-使用配置文件 /path/to/manga-organizer.config.yaml 整理 /path/to/source。
-```
-
-## Review-only
-
-```text
-只检查 /Volumes/漫画/待整理，不修改和转换任何文件，输出完整计划。
+只做预检和系列身份审计，输出计划、真实缺章、回退卷和待解决决定，不创建或修改任何漫画归档。
 ```

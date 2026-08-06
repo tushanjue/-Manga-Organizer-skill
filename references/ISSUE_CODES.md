@@ -20,6 +20,19 @@ Use stable codes in `preflight.md` and `plan.json`.
 - `NAME005`: output collision - REVIEW
 - `NAME006`: special cannot be classified - REVIEW
 
+## Series identity
+
+- `SERIES_IDENTITY_MIX`: one series mixes continuous chapters, volume-aware chapters, or undocumented volume-only identities - BLOCKER
+- `PARTIAL_VOLUME_TAGGING`: only some normal chapters carry filename or ComicInfo Volume - BLOCKER
+- `KAVITA_VOLUME_JUMP_RISK`: source-volume grouping may make Kavita interpret continuous chapters as skipped volumes - REVIEW/BLOCKER
+- `DUPLICATE_CHAPTER_IDENTITY`: two formal-library items resolve to the same series/chapter identity - BLOCKER
+- `UNDOCUMENTED_VOLUME_FALLBACK`: a volume-only item coexists with chapters without verified fallback evidence/reporting - BLOCKER
+- `CONFIRMED_SOURCE_GAP`: source material is genuinely absent and the gap is documented - INFO
+- `UNINTENDED_GAP`: chapter sequence has an unexplained gap - REVIEW and promotion blocker in `auto-safe`
+- `USER_IGNORED_DAMAGED_ITEM`: user chose to skip a damaged item while preserving source/review copy - INFO
+- `FALLBACK_COVERED_UNNUMBERED_RANGE`: a verified fallback contains story pages whose chapter identity range is unknown - INFO/REVIEW in the sequence audit, not an identity conflict
+- `UNMAPPED_SOURCE_ABSENCE`: a source volume is confirmed absent but its chapter range cannot be mapped reliably - REVIEW; keep `chapter_range: null`
+
 ## Archive
 
 - `ARC001`: extension does not match content - WARNING
@@ -31,7 +44,7 @@ Use stable codes in `preflight.md` and `plan.json`.
 - `ARC007`: decompression bomb risk - BLOCKER
 - `ARC008`: path traversal or unsafe entry - BLOCKER
 - `ARC009`: unrelated/system files - SAFE_FIX
-- `ARC010`: metadata-only update changed a non-metadata member, member order, or chapter identity - BLOCKER
+- `ARC010`: metadata refresh or identity normalization changed any non-ComicInfo member byte or archive member order - BLOCKER without exception
 
 ## Images and pages
 
@@ -70,3 +83,11 @@ Use stable codes in `preflight.md` and `plan.json`.
 - `META010`: tag contains unapproved Han text outside recognized release tags/allowlist or lacks a reliable canonical value - REVIEW
 - `META011`: protected `cosplay` or a user-locked allowlist tag was lost or changed - BLOCKER
 - `META012`: Japanese Summary translation is unreliable, unnatural, contains unsupported additions or unresolved names, or retains Japanese display text - REVIEW
+
+## Specials, resume, and promotion
+
+- `SPECIAL_RANGE_INCOMPLETE`: contents lists a Special but no complete independent page range exists - REVIEW; create nothing
+- `SPECIAL_DUPLICATE_PAGE`: a companion page duplicates retained content by byte/perceptual evidence - INFO/REVIEW
+- `RESUME_SOURCE_CHANGED`: a source hash changed since checkpoint - BLOCKER for deterministic resume
+- `RESUME_BASELINE_CHANGED`: the formal-library baseline changed since checkpoint - BLOCKER for promotion
+- `PROMOTION_POSTCHECK_FAILED`: validation from the promoted formal path failed - BLOCKER; roll back

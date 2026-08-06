@@ -1,500 +1,159 @@
 ---
 name: manga-organizer
-description: Automatically inspect, normalize, enrich, split, convert, package, and export manga folders for Kavita, preferring one verified CBZ per chapter and falling back to one CBZ per confirmed volume when chapter boundaries are unclear. Use when the user gives a manga folder or asks to organize loose images, PDF, image-based EPUB, CBZ/ZIP/CBR/RAR/7Z; fetch Chinese metadata from Bangumi; write ComicInfo.xml; and produce a verified, non-destructive output library.
+description: Inspect, organize, split, normalize, resume, validate, and safely replace manga libraries for Kavita. Use for mixed images/PDF/EPUB/CBZ archives; continuous chapter identities; Kavita volume-jump repair; removal of partial Volume tagging; splitting volume CBZs into chapters; verified volume fallback when boundaries are unavailable; preserving real source gaps; merging and deduplicating official companion material into Specials; resuming paused Manga Organizer work; reorganizing an existing Manga Organizer Output; or performing explicit, non-destructive identity normalization with backups and member-level audits.
 ---
 
-# Manga Organizer Skill
+# Manga Organizer
 
-Use this skill whenever the user provides a folder path and asks to organize, convert, package, repair, enrich, or export manga.
+Turn a source folder or existing Manga Organizer output into a verified Kavita library without silently damaging originals.
 
-The goal is to turn a mixed or disordered source folder into a verified manga library without silently damaging the originals.
+## 1. Inputs and defaults
 
-## 1. Required input and defaults
+Require only `source`. Accept optional `output`, `profile`, `identity_policy`, `language`, `reading_direction`, `metadata`, `mode`, `update_mode`, and `config`.
 
-The only required input is:
-
-- `source`: the exact source folder supplied by the user.
-
-Optional inputs:
-
-- `output`: destination folder.
-- `profile`: `kavita-volume`, `kavita-chapter`, `standard-cbz`, `preserve-layout`, or `custom`.
-- `language`: `zh-Hans`, `zh-Hant`, `ja`, `en`, or another BCP 47 tag.
-- `reading_direction`: `rtl`, `ltr`, or `auto`.
-- `metadata`: `bangumi`, `existing-only`, or `none`.
-- `mode`: `auto-safe` or `review-all`.
-- `config`: path to a custom YAML configuration.
-
-Defaults when the user supplies only a folder:
+Use these defaults:
 
 ```yaml
 profile: kavita-chapter
+identity_policy: continuous-chapter
+unsplittable_volume_policy: verified-volume-fallback
+mixed_packaging_policy: allow-documented-volume-fallback
+companion_material_policy: review
 language: zh-Hans
 reading_direction: rtl
 metadata: bangumi
 mode: auto-safe
+update_mode: new-library
 preserve_source: true
 overwrite_source: false
-image_policy: preserve
-pdf_profile: balanced-high-quality
-epub_policy: convert-image-based-only
+resume_enabled: true
 ```
 
-If `output` is omitted, create a sibling directory rather than a child of the source:
+Create an omitted output as a sibling named `<source-folder-name> - Manga Organizer Output`; never put output inside source.
 
-```text
-<source-folder-name> - Manga Organizer Output
-```
+## 2. Required references
 
-Never place the output inside the source tree because that can cause recursive rescanning.
+Read only the references needed for the task, but read each selected file completely:
 
-## 2. Non-negotiable operating rules
+- Read `references/KAVITA_FORMAT.md` for identity policies, chapter boundaries, EPUB/PDF evidence, volume fallback, page coverage, and Kavita naming.
+- Read `references/IDENTITY_REORGANIZATION.md` before updating an existing library, repairing volume jumps, preserving real gaps, selecting editions, or merging/deduplicating Specials.
+- Read `references/RESUME_AND_RECOVERY.md` for pause/resume, persistent staging, backups, promotion, postcheck, and rollback.
+- Read `references/COMICINFO_MAPPING.md` before creating or changing ComicInfo.
+- Read `references/METADATA_POLICY.md` for Chinese fields, Japanese Summary translation, Publisher, Tags, and locked metadata.
+- Read `references/BANGUMI_MATCHING.md` before network metadata matching.
+- Use codes from `references/ISSUE_CODES.md` in plans and reports.
 
-1. Treat the source folder as read-only by default.
-2. Run a complete preflight before the first write operation.
-3. Show the detected problems and proposed output tree before conversion.
-4. Never silently overwrite, delete, rename, or move source files.
-5. Write to a staging directory, validate, then atomically move into the final destination.
-6. Keep backups when updating an existing output file.
-7. Do not execute `git init`, `git add`, `git commit`, `git push`, or change Git remotes.
-8. Do not claim completion unless generated archives, images, XML, and directory layout have been verified.
-9. Continue processing independent high-confidence items even if some items require review; isolate uncertain items instead of failing the entire batch.
-10. Never use OCR unless filenames, embedded metadata, and directory context are insufficient and the user explicitly permits it.
-11. Prefer one chapter per CBZ. Use `kavita-volume` globally when the user explicitly requests it; otherwise apply it only as an automatic per-file fallback for a confirmed volume whose chapter boundaries cannot be identified reliably.
-12. Never guess chapter splits. After exhausting allowed boundary evidence, package an unsplittable but complete, clearly identified volume as one volume CBZ; use `_Needs Review` only when the volume identity, file integrity, or complete page coverage is also uncertain.
-13. When updating an existing output library, modify metadata only: preserve source files, chapter identity, page order, and every non-metadata member byte; back up first, work in staging, validate, then atomically replace.
+## 3. Non-negotiable safety
 
-## 3. Network and proxy rules
+1. Treat every source as read-only unless the user explicitly authorizes otherwise.
+2. Run full preflight and show the proposed series-level identity plan before writing.
+3. Never overwrite, delete, move, rename, renumber, or replace source material silently.
+4. Build in a persistent sibling staging/checkpoint directory; use `/private/tmp` only for reconstructable caches and extraction.
+5. Back up an existing formal library outside that library before any replacement.
+6. Finish the current archive-sized atomic unit before pausing; never leave a half-written CBZ or half-completed replacement.
+7. Use temporary files plus `os.replace` for single-archive/state writes and atomic directory renames for promotion.
+8. Never run Git operations as part of manga organization.
+9. Never claim completion before archive, identity, source-hash, backup, and formal-path postchecks pass.
+10. Continue independent safe work when some items need review; preserve review copies and source files.
 
-Before any network operation on macOS/Linux, set these environment variables for the current process only:
+## 4. Update modes
 
-```bash
-export http_proxy="http://127.0.0.1:17891"
-export https_proxy="http://127.0.0.1:17891"
-export all_proxy="socks5://127.0.0.1:17891"
-export HTTP_PROXY="$http_proxy"
-export HTTPS_PROXY="$https_proxy"
-export ALL_PROXY="$all_proxy"
-```
+Choose one mode before planning:
 
-For PowerShell, use the equivalent session-only variables:
+- `new-library`: build a new output without changing source.
+- `metadata-refresh`: change only non-identity ComicInfo fields. Preserve filename, directory, `Series`, `LocalizedSeries`, `SeriesSort`, `Volume`, `Number`, `Format`, member bytes, and member order.
+- `identity-normalization`: enable only when the user explicitly asks to repair Kavita jumps, continuous chapter identity, series merging, or Special reclassification. Permit only confirmed filename/directory and identity-field changes; preserve every non-ComicInfo byte, page order, member order, and source.
 
-```powershell
-$env:http_proxy  = "http://127.0.0.1:17891"
-$env:https_proxy = "http://127.0.0.1:17891"
-$env:all_proxy   = "socks5://127.0.0.1:17891"
-$env:HTTP_PROXY  = $env:http_proxy
-$env:HTTPS_PROXY = $env:https_proxy
-$env:ALL_PROXY   = $env:all_proxy
-```
+Generate the member-level and series audits required by `references/IDENTITY_REORGANIZATION.md` for identity normalization.
 
-Do not hard-code this proxy into generated manga files, permanent application settings, or source documents.
+## 5. Series-level identity planning
 
-Use the current official Bangumi API, not HTML scraping. Before calling it, verify the current API contract and User-Agent guidance. Use a distinct User-Agent containing a developer identifier, skill name, and version. Do not use a library default User-Agent.
+Select one policy per series, never independently per file:
 
-## 4. Automatic workflow
+- `continuous-chapter` (default): name normal chapters `<Series> Ch.<chapter:03>.cbz`; write `Number`; omit `Volume`. Preserve source volume in `Notes`, `plan.json`, and `source-provenance.csv` only.
+- `volume-aware-chapter`: use `<Series> Vol.<volume:02> Ch.<chapter:03>.cbz` and write both `Volume` and `Number`; use only on explicit user request.
+- `volume-only`: collect the series as `<Series> v<volume:02>.cbz`; write `Volume` and omit `Number`.
 
-Execute the following stages in order.
+Reject mixed normal-chapter identities, partial Volume tagging, duplicate chapter identities, and undocumented volume fallbacks. Under `continuous-chapter`, documented verified fallback volumes may coexist with chapter CBZs without being treated as a conflict: chapters use only `Ch.xxx` with no ComicInfo `Volume`; fallbacks use only `vXX` with `Volume` and no `Number`.
 
-### Stage A - Resolve and secure the paths
+When explicitly normalizing an existing continuous series, remove filename `Vol.xx` and ComicInfo `Volume` from normal chapters, retain `Number`, preserve source volume as provenance, and verify every non-XML member byte and order.
 
-- Confirm the source exists and is readable.
-- Resolve symlinks and canonical paths.
-- Confirm the output is outside the source.
-- Check free disk space and output permissions.
-- Detect NAS/SMB paths and use conservative write/retry behavior.
-- Create a private staging directory and report directory.
+## 6. Inventory and preflight
 
-### Stage B - Inventory the source
+Inventory supported images, PDF, image/fixed-layout EPUB, ZIP/CBZ, RAR/CBR, 7Z/CB7, TAR/CBT, embedded metadata, archive members, page order, and actual signatures. Record SHA-256 for every source and formal-library baseline item.
 
-Recursively inventory supported inputs:
-
-- loose image folders;
-- JPG, JPEG, PNG, WebP, GIF, AVIF, BMP, TIFF;
-- ZIP, CBZ, RAR, CBR, 7Z, CB7, TAR, CBT;
-- PDF;
-- EPUB.
-
-Detect actual content using file signatures where practical; do not trust extensions alone.
-
-Record at least:
-
-- path;
-- detected type;
-- size;
-- modified time;
-- SHA-256 before conversion for every source item that may be written to output;
-- page/image count;
-- embedded metadata;
-- candidate series, volume, chapter, language, and group tags;
-- confidence score;
-- detected problems.
-
-### Stage C - Mandatory preflight
-
-Create:
+Create or refresh:
 
 ```text
 _reports/preflight.md
 _reports/plan.json
 _reports/chapter-boundaries.json
+_reports/source-provenance.csv
+_reports/series-identity-audit.csv
+_reports/decision-resolution.csv
+_reports/decision-resolution.md
+_reports/resume-state.json
 ```
 
-Include a chapter-split table in preflight for every planned package unit with: source file, volume, chapter, packaging mode, start page, end page, packaged page count, boundary evidence, confidence, fallback reason, and whether it includes front matter, end matter, credits, or release pages. For a volume fallback, set chapter to null and record the full `1..N` span. Record every volume-PDF range, fallback decision, and coverage check in `chapter-boundaries.json`.
-
-Classify every issue as:
-
-- `BLOCKER`: unsafe or impossible to continue automatically;
-- `WARNING`: can continue, but the result may differ from the source;
-- `SAFE_FIX`: deterministic and non-destructive repair;
-- `INFO`: no action required.
-
-At minimum check:
-
-- files placed directly at a prospective Kavita library root;
-- multiple series mixed in one folder;
-- one series split between adjacent folders;
-- missing or ambiguous series, volume, or chapter numbers;
-- conflicting filename and ComicInfo.xml metadata;
-- invalid Windows/macOS filename characters;
-- nested archives or nested content folders;
-- duplicate or malformed ComicInfo.xml files;
-- ComicInfo.xml not at archive root;
-- `.DS_Store`, `__MACOSX`, `Thumbs.db`, URL files, advertisements, and unrelated documents;
-- corrupt, encrypted, empty, or disguised archives;
-- path traversal entries, symlinks, decompression bombs, and extreme expansion ratios;
-- lexicographic page-order problems such as `1, 10, 2`;
-- duplicate pages, missing sequences, unreadable images, zero-byte files, extreme dimensions, and EXIF rotation;
-- PDF encryption, page errors, text layer, links, annotations, inconsistent page size, and rotation;
-- image-based/fixed-layout versus reflowable EPUB;
-- missing language or reading direction;
-- low-confidence or multiple Bangumi matches.
-- whether each multi-chapter PDF has validated chapter boundaries or qualifies for a documented confirmed-volume fallback with full one-time page coverage;
-- duplicate chapter identities and alternate language/raw/other editions.
-
-Display a concise summary before processing. In `auto-safe` mode:
-
-- proceed automatically only for items with no blockers and no unresolved ambiguity;
-- apply deterministic safe fixes;
-- place uncertain items in `_Needs Review` with candidates and reasons;
-- never guess a destructive or identity-changing decision.
-
-### Stage D - Parse names without losing information
+Audit each series for normal-chapter count, Special count, fallback-volume count, normal chapters carrying Volume, duplicate identities, unintended gaps, and confirmed source gaps. Persist primary-edition selection, OCR scope, ignored damaged items, locked metadata, and resolved decisions so resume does not ask again.
 
-For matching only, derive a cleaned title by removing or separating common release tags such as:
+## 7. Chapter boundary and fallback decisions
 
-- scanlation group names;
-- `简中`, `繁中`, `汉化`, `DL版`, `修正版`, `无修`, `扫图`;
-- source website names;
-- resolution and image-format labels;
-- bracketed release metadata.
-
-Do not discard this information. Preserve relevant values in `Translator`, `ScanInformation`, `Tags`, `Notes`, or the report. Recognized release tags such as `简中`, `繁中`, `汉化`, and `扫图` are explicit allowed Han-tag exceptions.
-
-Recognize common numbering forms including:
+Prefer one chapter per CBZ. Examine allowed evidence in the order and format-specific detail defined in `references/KAVITA_FORMAT.md`; never use OCR without explicit authorization recorded in both decision and resume state.
 
-- `v1`, `vol 01`, `volume 1`, `第01卷`, `卷2`, `册2`, `2巻`;
-- `c1`, `ch.001`, `chapter 1`, `第001话`;
-- decimal chapters such as `10.5`;
-- ranges such as `Vol. 1-5`;
-- specials such as `SP01`, `番外`, `特别篇`, `设定集`, and `画集`.
-
-### Stage E - Build a processing plan
+Split only when all page spans are continuous, non-overlapping, cover every source page exactly once, and the first, last, and boundary-near pages pass visual review. Calibrate printed contents-page numbers to scan indices. Resolve a suspicious single-page chapter label from multiple independent sources rather than trusting it alone.
 
-Group content into:
-
-```text
-Series -> Package Unit (Chapter, Special, or confirmed fallback Volume) -> Ordered Pages
-```
+If boundaries remain unreliable but the source is a high-confidence complete single volume with a confirmed volume number and exact readable `1..N` coverage, create a documented volume fallback. Do not send an otherwise valid complete volume to review merely because it cannot be split. Never disguise it as a long chapter or invent/evenly divide ranges.
 
-Generate a preview showing:
+Use `_Needs Review` only for uncertain series/volume identity, mixed volumes, damage/missing pages, incomplete coverage, or unresolved duplicate identity. Distinguish missing source, complete unsplittable source, and damaged source exactly as the Kavita reference requires.
 
-- inferred series and aliases;
-- volume/chapter assignment;
-- page count and order;
-- selected output profile;
-- proposed output path;
-- metadata source;
-- estimated size;
-- fixes to be applied;
-- items requiring review.
+## 8. Page and archive handling
 
-Under the default `kavita-chapter` profile, plan one CBZ for each numbered chapter when boundaries are reliable. Inputs already containing one chapter per PDF, image-based EPUB, or archive remain one-to-one. If a multi-chapter file is a clearly identified complete volume but has no reliable chapter division, automatically plan one documented volume CBZ for that file. If several editions map to the same Kavita `Series`/`Volume`/`Number`, select only the high-confidence primary edition for the library and place every other edition in `_Needs Review/Alternate Editions` with reasons; never overwrite, discard, or assign duplicate identities.
+- Natural-sort pages; preserve original image bytes unless conversion is requested.
+- Reject unsafe paths, symlinks, encryption, corruption, decompression bombs, multiple/rootless ComicInfo, and XML external entities.
+- For existing CBZ splits, copy image bytes without rendering; compare each output page SHA-256 to its source and record the full mapping.
+- Assign cover, contents, and front matter to the first chapter; assign end matter, production, advertisements, copyright, and release pages to the last chapter unless a complete independent Special is proven.
+- Preserve repeated advertisements, production pages, and scanlation information unless the user explicitly requests deletion.
+- Follow EPUB OPF manifest, spine, NCX, navigation document, printed contents, and visible headings; reject automatic conversion of reflowable text EPUB.
 
-## 5. Conversion rules
+## 9. Specials and alternate editions
 
-### Loose images to CBZ
+Create a Special only from a complete, independent, high-confidence page range. A contents entry outside the actual scan range is report-only; never create an empty or fabricated Special.
 
-- Natural-sort pages.
-- Normalize archive page names to `0001.ext`, `0002.ext`, and so on.
-- Keep original image bytes unless the user asks for image conversion or optimization.
-- Apply EXIF orientation without recompressing when possible; otherwise report the required rewrite.
-- Put pages directly at the CBZ root.
-- Exclude system and unrelated files.
-- Support page reorder, rotation, deletion, replacement, cover selection, spread splitting, merge, and split when requested.
+Apply `companion_material_policy` as `merge-specials`, `separate-series`, or `review`. Merge official/high-confidence companion material into the main `Specials` folder only when the user requests it or policy allows it. Never auto-merge unofficial or uncertain doujin material.
 
-### PDF to CBZ
+Before merging, compare byte SHA-256, perceptual hashes, sequence, completeness, and visually review uncertain matches. Bind kept output pages and omitted-page decisions to actual preserved source/target page hashes; every omission also requires a verified review copy. Keep only complete unique content and report every omitted page, source index, duplicate target, evidence, source preservation, and review-copy status. Use stable non-conflicting `SP` numbers, `Format=Special`, reliable Chinese titles, main-series identity, and provenance in Notes/reports.
 
-Default policy: preserve quality without unnecessary upscaling.
+Select one high-confidence primary edition for the formal library. Put every alternate in `_Needs Review/Alternate Editions`; never overwrite, discard, or disguise it. Persist selection across resume unless source hashes or user decisions change.
 
-1. Inspect the PDF first.
-2. Determine whether it represents one chapter or a multi-chapter volume. Keep a one-chapter PDF one-to-one. For a multi-chapter volume, prefer chapter splitting but permit the automatic volume fallback below.
-3. For a multi-chapter volume, identify its chapter range and page spans using the evidence priority and boundary rules in `references/KAVITA_FORMAT.md`. Do not use OCR without explicit permission.
-4. Split by chapter only when chapter numbering is continuous, page spans are contiguous and non-overlapping, and `sum(end - start + 1) == source PDF page count`. If reliable chapter divisions remain unavailable, automatically package the complete file as one volume CBZ when its series and volume identity are high-confidence, every page is readable, and the full `1..N` span is covered exactly once. Do not fabricate chapter numbers. If those fallback conditions fail, move the item to `_Needs Review`.
-5. When splitting, assign front cover, contents, and other front matter to the first chapter; assign end matter, credits, release pages, and advertisements to the last chapter. In volume fallback mode, retain all pages once in source order. Create a `Specials` item only for a high-confidence independent extra.
-6. Preserve repeated credits, release, and advertisement pages. When reliably identified, mark them `Advertisement` in ComicInfo `Pages` rather than deleting them.
-7. If each page contains one suitable full-page raster image and extraction preserves it correctly, prefer lossless extraction; otherwise render with a reliable PDF renderer.
-8. For `balanced-high-quality`, use a sensible high-quality default such as 240 DPI and JPEG quality around 92 without upscaling beyond useful source resolution. Preserve lossless formats when transparency or line art requires them.
-9. Respect rotation and crop boxes, process page-by-page, and compare each source span with its output image count.
-10. Keep the source PDF and warn that selectable text, links, bookmarks, forms, annotations, and other PDF-only features may not survive conversion.
+## 10. Real gaps and damaged inputs
 
-### EPUB
+Never renumber later chapters, create placeholders, invent ranges, or treat volume numbers as chapter numbers. Record `deliberate_missing_ranges`, reason, missing source, and user confirmation in plan, boundaries, and execution reports.
 
-- Detect fixed-layout or image-based manga EPUBs.
-- Follow the EPUB spine order rather than filename order alone.
-- Read and map OPF metadata.
-- Convert image-based manga EPUBs to CBZ.
-- Keep an EPUB that already represents one chapter as one chapter CBZ.
-- Do not automatically convert reflowable text EPUBs; retain them under `_Preserved EPUB` and report why.
+Classify gaps as `unintended_gap`, `confirmed_source_gap`, or `user_ignored_damaged_item`. Record a missing source volume with an unknown chapter range as unmapped source absence, never as a guessed confirmed chapter range. A documented fallback may record `fallback_covered_range` only from reliable volume-to-chapter evidence; otherwise it remains unnumbered volume coverage and cannot silently close chapter gaps. A user-ignored damaged item must not block independent work or produce a formal CBZ; preserve source and review copy and record the decision in `decision-resolution.csv` and `skipped-items.csv`.
 
-### Existing archives
+## 11. Metadata
 
-- Safely extract CBR/RAR/CB7/7Z/TAR/CBT and repack as CBZ when the selected profile requires CBZ.
-- Normalize existing CBZ files only when needed.
-- Keep archives that already represent one chapter as one chapter CBZ.
-- Preserve unknown ComicInfo.xml fields and user metadata.
-- Never execute files contained in archives.
+Match Bangumi only at high confidence; continue safe local work when unavailable. For Chinese libraries require reliable Chinese `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, and `Genre`. When only a reliable Japanese Summary exists, translate it into faithful natural Chinese, record `summary_source_language=ja` and `summary_status=translated-to-Chinese`, and keep the original in provenance/cache. Never translate Japanese work titles by default. User-locked values win.
 
-## 6. Bangumi metadata workflow
+Keep the configured proxy session-only; never write it into manga files, ComicInfo, or permanent settings.
 
-Use Bangumi only after local name parsing.
+## 12. Execution, pause, promotion, and validation
 
-Search with normalized simplified/traditional Chinese titles, Japanese/original titles, aliases, release-tag-stripped titles, and ISBN or subject ID. Use Japanese values for matching evidence only. Before creating or updating ComicInfo for a Chinese library, read and apply `references/METADATA_POLICY.md` after merging sources.
+Use `scripts/cbz_transform.py` for explicit CBZ split, identity normalization, and Special merging. Use `scripts/library_state.py` for full-library validation, checkpoint/resume checks, promotion, `recover-promotion`, postcheck, and rollback. Run `--help` and a dry run before mutation; never use these tools against an unconfirmed target.
 
-- Require reliable Chinese in `Series`, `LocalizedSeries`, `SeriesSort`, `Title`, and `Genre`. Prefer a reliable Chinese `Summary`; when only a reliable Japanese summary exists, translate it into faithful, natural Chinese under `references/METADATA_POLICY.md`. Never translate Japanese titles by default.
-- Format `Publisher` as `中文译名（原文名）` when both reliable, different values exist; do not fabricate or duplicate names.
-- Keep `Tags` non-Chinese by default, but allow recognized Chinese release tags and documented user-locked exceptions; preserve exact `cosplay`.
-- Permit reliable official creator names in their original language. Except for the controlled Japanese-to-Chinese `Summary` translation, keep other Japanese originals only for matching and source reports.
+On pause, finish the current archive, atomically refresh reports and `resume-state.json`, and provide exact continuation instructions. On resume, verify source and formal-library hashes, reuse recorded OCR permissions/boundaries/decisions, rebuild missing disposable caches deterministically, and continue from the last complete unit.
 
-If another required Chinese value, Publisher component, or reliable canonical tag is unavailable, preserve a locked value or send it to review; never invent or silently translate it. Treat a per-item explicit user lock as higher priority than automatic summary translation.
+Promote only after complete candidate validation. Reject symlinks in the candidate; partition every old formal archive into explicit affected and path/hash-locked unaffected sets. Bind the promotion journal to the same run, state, candidate, and formal path. Atomically rename the old formal library to a unique external timestamped backup, move the candidate into place, mark `validated-final`, and rerun postcheck from the formal path. If postcheck fails, preserve the failed candidate, restore the backup, and report failure.
 
-Use current official endpoints, including subject search and subject detail endpoints as documented at execution time.
+Postcheck ZIP CRC, root ComicInfo uniqueness and parsing, `PageCount`, image decoding, natural order, series identity uniqueness, intentional gaps, documented fallbacks, page coverage, source/review hashes, formal CBZ count, total pages, checksums, and backup existence. Unaffected archive SHA-256 values must remain unchanged.
 
-Candidate scoring must consider:
+## 13. Final reports and completion
 
-- exact title or alias match;
-- media type consistent with manga/book;
-- author/artist/publisher agreement when available;
-- publication date;
-- ISBN;
-- volume-specific evidence;
-- difference between the best and second-best candidate.
+Also create `execution-report.md`, `bangumi-review.csv`, `skipped-items.csv`, `checksums.sha256`, `identity-normalization-member-integrity.csv`, and `reorganization-YYYYMMDD.json`, deriving `YYYYMMDD` at runtime rather than hardcoding a date.
 
-Auto-apply only when confidence is high and the winning margin is clear. Recommended default:
+The final report must list normal chapters, Specials, fallback volumes, real gaps, ignored damaged items, primary/alternate editions, Special dedupe results, identity-normalization count, unaffected archive count, source hashes, formal-path postcheck, and backup path.
 
-```text
-auto-match score >= 0.92
-and winner margin >= 0.10
-```
+Complete only when the source is unchanged, all supported files are inventoried, every decision and fallback is documented, every completed archive passes validation, all page coverage and identities are correct, resume state is final, formal-path postcheck passes, and recovery remains possible from the verified backup.
 
-Otherwise:
-
-- do not overwrite identity fields;
-- write candidates to `_reports/bangumi-review.csv`;
-- place the item in `_Needs Review` or continue with existing/local metadata, clearly marked as pending.
-
-Metadata merge priority by default:
-
-```text
-locked user value
-> existing valid ComicInfo.xml
-> exact volume-level metadata
-> series-level metadata
-> embedded metadata
-> filename and folder inference
-```
-
-After merging, validate every field against `references/METADATA_POLICY.md`; `Tags` from every source must pass the language-exception and allowlist rules.
-
-Use Bangumi series covers for the library record only unless the user explicitly asks to insert or replace a page. Do not silently add a generic series cover as every volume's first page.
-
-Cache successful API responses and continue local processing if the network becomes unavailable.
-
-## 7. ComicInfo.xml rules
-
-Every generated CBZ must contain exactly one UTF-8 `ComicInfo.xml` at the archive root.
-
-Populate evidence-backed fields described in `references/COMICINFO_MAPPING.md`, then enforce `references/METADATA_POLICY.md`.
-
-Defaults for translated Japanese manga:
-
-```xml
-<LanguageISO>zh-Hans</LanguageISO>
-<Manga>YesAndRightToLeft</Manga>
-```
-
-Use `zh-Hant` for traditional Chinese. Do not write RTL when the evidence indicates a left-to-right edition.
-
-Set `PageCount` from the actual packaged page count. Mark the selected first cover in `Pages`. Preserve unknown XML elements and extension fields when updating existing metadata. Disable external XML entities and never resolve external resources.
-
-For a normal chapter CBZ, use the actual `Number`, a confirmed `Volume`, the actual `PageCount`, and a Chinese `Title`. Keep `Series`, `LocalizedSeries`, and `SeriesSort` on one Chinese series name. For extras, appendices, and setting material, use an `SP` number, reliable Chinese title, and `Format=Special`; never disguise them as numbered chapters.
-
-For metadata-only updates, change only the root `ComicInfo.xml`. Preserve archive member names/order, image and other non-metadata bytes, chapter identity, and source files; create a backup, stage and validate the candidate, then atomically replace the output.
-
-## 8. Output profiles
-
-### `kavita-chapter` - default, with volume fallback
-
-```text
-<output>/
-└── <Series>/
-    ├── <Series> Vol.01 Ch.001.cbz
-    ├── <Series> Vol.01 Ch.002.cbz
-    ├── <Series> Ch.003.cbz
-    └── Specials/
-        └── <Series> SP01 <Title>.cbz
-```
-
-Use `<Series> Vol.{volume:02} Ch.{chapter:03}.cbz`; when volume is unknown use `<Series> Ch.{chapter:03}.cbz`. When a confirmed multi-chapter volume has no reliable chapter divisions, automatically emit `<Series> v{volume:02}.cbz` and record `packaging_mode: volume-fallback` instead of guessing splits.
-
-### `kavita-volume` - explicit global profile or automatic per-file fallback
-
-```text
-<output>/
-└── <Series>/
-    ├── <Series> v01.cbz
-    └── <Series> v02.cbz
-```
-
-Select this profile globally only when the user explicitly asks for one CBZ per volume. The default chapter profile may still apply the same layout to an individual confirmed volume when chapter boundaries are unavailable.
-
-### `standard-cbz`
-
-```text
-<output>/
-├── <Series> Ch.001.cbz
-└── <Series> Ch.002.cbz
-```
-
-This is portable CBZ packaging, not a complete Kavita library root. Prefer chapter splitting for multi-chapter PDFs, but use the documented confirmed-volume fallback when reliable boundaries are unavailable.
-
-### `preserve-layout`
-
-Keep the user's directory layout and only repair archive structure, page order, and metadata.
-
-### `custom`
-
-Read the user's YAML config. Support variables such as:
-
-```text
-{series} {localizedSeries} {title} {volume} {volume:02}
-{chapter} {chapter:03} {author} {publisher} {language}
-{scanlator} {format} {bangumiId} {page} {page:0000}
-```
-
-Validate custom templates for empty values, duplicate names, illegal Windows characters, path length, and Kavita compatibility before writing.
-
-See `templates/manga-organizer.config.yaml`.
-
-## 9. Archive construction and validation
-
-Build CBZ files as ZIP-compatible archives with ZIP64 support when needed.
-
-Before finalizing each archive:
-
-1. confirm pages and `ComicInfo.xml` are at the archive root;
-2. verify archive CRC and central directory;
-3. reopen the archive using an independent read step;
-4. parse `ComicInfo.xml` safely;
-5. decode every page image;
-6. compare actual pages with `PageCount`;
-7. inspect the first, middle, and last page dimensions;
-8. confirm natural order;
-9. confirm no prohibited or accidental files remain;
-10. verify the final filename and path;
-11. compute a SHA-256 checksum.
-12. validate Chinese fields, Japanese-summary translation fidelity and naturalness, `Publisher` policy, `Tags` language exceptions, the locked-tag allowlist, and exact retention of pre-existing `cosplay`;
-13. for metadata-only updates, compare member order and per-member SHA-256 before/after and confirm all non-metadata bytes and chapter identity are unchanged.
-
-Across the completed batch, verify that chapter numbers have no unintended gaps or duplicates among chapter-mode items, every CBZ represents exactly one normal chapter, one identified special, or one documented fallback volume, and each source PDF page is covered exactly once. For each fallback volume, verify a confirmed volume identity, no chapter token or fabricated `Number`, natural page order, and complete `1..N` coverage. Recompute each source-file SHA-256 and confirm it matches the pre-conversion hash.
-
-For Kavita output, verify that:
-
-- no media files exist directly at the library root;
-- each series is nested in its own folder;
-- one series is not split between adjacent folders;
-- filenames or internal metadata contain usable volume/chapter information;
-- `ComicInfo.xml` is at the CBZ root.
-
-## 10. Reports and final folder
-
-The output must include:
-
-```text
-<output>/
-├── _reports/
-│   ├── preflight.md
-│   ├── plan.json
-│   ├── chapter-boundaries.json
-│   ├── execution-report.md
-│   ├── bangumi-review.csv
-│   ├── skipped-items.csv
-│   └── checksums.sha256
-├── _Needs Review/
-│   └── Alternate Editions/
-├── _Preserved EPUB/
-└── <organized series folders>
-```
-
-Omit empty review folders if no items require them.
-
-The final report must state:
-
-- source and output paths;
-- selected profile;
-- total series, volumes, chapters, pages, and bytes;
-- converted PDFs and EPUBs;
-- metadata matches and confidence;
-- automatic fixes;
-- skipped or quarantined items;
-- validation results;
-- chapter-boundary evidence and source-page coverage results;
-- automatic volume fallbacks, including source file, confirmed volume, failed/absent boundary evidence, fallback reason, and full-page coverage result;
-- metadata audit: final Chinese series name, Summary source language and translation status, final Publisher, tag normalization mapping, retained special tags with reasons, omitted/review tags, and whether images remained byte-identical;
-- confirmation that source files were not modified;
-- any unresolved issues.
-
-## 11. Interaction policy
-
-When the user provides a folder:
-
-1. Start the preflight immediately; do not ask which technology to use.
-2. Show the issue summary and proposed structure.
-3. If there are no blockers or unresolved identity conflicts, continue automatically in the same workflow.
-4. If a decision is genuinely required, ask one consolidated question covering all ambiguous series rather than many small questions.
-5. Never ask the user to manually package files that the skill can process itself.
-6. Do not stop simply because Bangumi is unavailable; finish safe local work and mark metadata as pending.
-7. Do not describe an item as successfully organized until the final archive validation passes.
-
-## 12. Completion checklist
-
-The task is complete only when:
-
-- the source remained unchanged unless the user explicitly authorized otherwise;
-- all supported files were inventoried;
-- preflight and plan files exist;
-- every completed CBZ passes integrity, XML, and image checks;
-- PDF page counts match generated pages;
-- every reliably bounded normal chapter has exactly one CBZ, while specials use `SP` and `Format=Special`;
-- chapter sequences have no unintended gaps or duplicates, and every completed CBZ represents exactly one chapter, one identified special, or one documented confirmed-volume fallback with no fabricated chapter identity;
-- every volume-PDF page is assigned exactly once with no gaps or overlaps, while each fallback preserves natural order and complete source coverage, as recorded in `chapter-boundaries.json`;
-- image-based EPUB order follows the spine;
-- Chinese title fields, Publisher policy, Tags policy, protected tags, and user-locked metadata pass `references/METADATA_POLICY.md` or are explicitly left for review;
-- ComicInfo.xml contains actual page count and correct language/direction;
-- Kavita output passes directory-layout checks;
-- checksums and execution report exist;
-- source-file hashes match before and after conversion;
-- metadata-only updates preserve chapter identity, member order, and every non-metadata member byte;
-- no Git operation was performed.
-
-Consult the bundled references for detailed format, metadata, and issue rules.
+In `auto-safe`, unresolved `unintended_gap`, `FALLBACK_COVERED_UNNUMBERED_RANGE`, or any other REVIEW/BLOCKER prevents whole-library promotion, while independent archive construction and review-copy preservation may continue. Promotion requires reclassification from reliable evidence or an explicit persisted user decision; never infer a range merely to clear the review.

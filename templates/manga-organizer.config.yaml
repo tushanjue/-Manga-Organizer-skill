@@ -1,11 +1,22 @@
-version: 1
+version: 2
 
 source: ""
 output: ""
 
 profile: kavita-chapter
-mode: auto-safe
+identity_policy: continuous-chapter
+unsplittable_volume_policy: verified-volume-fallback
+mixed_packaging_policy: allow-documented-volume-fallback
+companion_material_policy: review
+preserve_intentional_gaps: true
+persistent_staging: auto
+resume_enabled: true
+identity_normalization_requires_explicit_request: true
+preserve_nonmetadata_bytes: true
+post_promotion_validation: true
 
+mode: auto-safe
+update_mode: new-library
 language: zh-Hans
 reading_direction: rtl
 metadata: bangumi
@@ -13,22 +24,144 @@ metadata: bangumi
 safety:
   preserve_source: true
   overwrite_source: false
-  backup_existing_output: true
-  staging_directory: ""
-  stop_on_blocker: true
-  metadata_only_update:
-    preserve_non_metadata_member_bytes: true
+  refuse_output_collisions: true
+  require_preflight: true
+  require_external_backup: true
+  require_staging: true
+  require_atomic_archive_write: true
+  require_atomic_library_promotion: true
+  reject_candidate_tree_symlinks: true
+  rollback_on_postcheck_failure: true
+  preserve_review_copies: true
+
+existing_library:
+  metadata_refresh:
+    preserve_filename_and_directory: true
+    preserve_identity_fields: [Series, LocalizedSeries, SeriesSort, Volume, Number, Format]
+    preserve_member_order: true
+  identity_normalization:
+    requires_explicit_request: true
+    allowed_fields: [Series, LocalizedSeries, SeriesSort, Volume, Number, Format, Title]
+    preserve_nonmetadata_bytes: true
     preserve_member_order: true
     preserve_page_order: true
-    preserve_chapter_identity: true
-    require_backup: true
-    require_staging_and_atomic_replace: true
+    preserve_unaffected_archive_sha256: true
+
+identity:
+  continuous_chapter:
+    chapter_file: "{series} Ch.{chapter:03}.cbz"
+    write_number: true
+    write_volume: false
+    source_volume_destinations: [Notes, plan.json, source-provenance.csv]
+  volume_aware_chapter:
+    explicit_only: true
+    chapter_file: "{series} Vol.{volume:02} Ch.{chapter:03}.cbz"
+    write_number: true
+    write_volume: true
+  volume_only:
+    volume_file: "{series} v{volume:02}.cbz"
+    write_number: false
+    write_volume: true
+  reject_mixed_normal_chapter_identity: true
+  allow_documented_volume_fallback_with_continuous_chapters: true
+
+boundaries:
+  evidence_order:
+    - embedded-contents-bookmarks-metadata
+    - epub-opf-spine-ncx-navigation
+    - visible-contents-headings-structure
+    - filename-folder-comicinfo
+    - adjacent-sequence-volume-chapter-map
+    - reliable-external-sources
+    - user-authorized-ocr
+  allow_ocr: false
+  record_ocr_scope_and_review: true
+  calibrate_printed_page_offset: true
+  require_contiguous_spans: true
+  require_no_overlap: true
+  require_exact_page_coverage: true
+  visually_review_first_last_and_boundaries: true
+  front_matter: first_chapter
+  end_matter: last_chapter
+  preserve_repeated_release_pages: true
+
+volume_fallback:
+  require_confirmed_series: true
+  require_confirmed_volume: true
+  require_exactly_one_complete_volume: true
+  require_all_pages_readable: true
+  require_exact_natural_order_coverage: true
+  forbid_fabricated_chapter_identity: true
+  require_cross_package_overlap_audit: true
+  perceptual_hash_algorithm: dhash-88-color
+  perceptual_distance: 4
+  bind_visual_decisions_to_page_hashes: true
+  unknown_chapter_range_status: unnumbered-volume-coverage
+  packaging_mode: volume-fallback
+  unresolved_identity_action: needs-review
+  recheck_when_new_evidence_available: true
+
+specials:
+  directory: Specials
+  file: "{series} SP{special:02} {title}.cbz"
+  require_complete_independent_range: true
+  official_merge_requires_policy_or_user_request: true
+  unofficial_or_uncertain_action: review
+  dedupe_byte_sha256: true
+  dedupe_perceptual_hash: true
+  visually_review_uncertain_duplicates: true
+  preserve_unique_pages: true
+  record_omitted_page_provenance: true
+  bind_output_pages_to_verified_source_pages: true
+  require_review_copy_for_omitted_pages: true
+
+gaps:
+  preserve_real_source_gaps: true
+  forbid_renumber_to_fill: true
+  forbid_placeholders: true
+  categories: [unintended_gap, confirmed_source_gap, user_ignored_damaged_item]
+
+resume:
+  state_file: _reports/resume-state.json
+  decisions_csv: _reports/decision-resolution.csv
+  decisions_md: _reports/decision-resolution.md
+  persistent_sibling_staging: true
+  pause_after_atomic_unit: true
+  verify_source_hashes_on_resume: true
+  verify_formal_baseline_on_resume: true
+  reuse_ocr_authorization_and_boundaries: true
+  reuse_primary_edition_selection: true
+  rebuild_disposable_cache_from_plan: true
+  verify_tool_config_plan_and_decision_fingerprints: true
+  require_affected_unaffected_formal_partition: true
+  bind_promotion_journal_to_run_and_state: true
+  recover_incomplete_promotion_journal: manifest-proven-only
+
+reports:
+  directory: _reports
+  required:
+    - preflight.md
+    - plan.json
+    - chapter-boundaries.json
+    - source-provenance.csv
+    - execution-report.md
+    - bangumi-review.csv
+    - skipped-items.csv
+    - checksums.sha256
+    - resume-state.json
+    - decision-resolution.csv
+    - decision-resolution.md
+    - series-identity-audit.csv
+    - identity-normalization-member-integrity.csv
+    - promotion-journal.json
+  reorganization_pattern: "reorganization-{runtime_date:YYYYMMDD}.json"
 
 network:
   use_session_proxy: true
   http_proxy: "http://127.0.0.1:17891"
   https_proxy: "http://127.0.0.1:17891"
   all_proxy: "socks5://127.0.0.1:17891"
+  persist_proxy: false
   timeout_seconds: 30
   retries: 3
 
@@ -46,11 +179,10 @@ bangumi:
   auto_match_threshold: 0.92
   winner_margin: 0.10
   cache_days: 30
-  cover_policy: library-only
 
 metadata_policy:
+  locked_user_values_first: true
   chinese_fields: [Series, LocalizedSeries, SeriesSort, Title, Summary, Genre]
-  normal_chapter_title: "第{chapter}话"
   summary_translation:
     japanese_when_chinese_missing: true
     style: natural-editorial-chinese
@@ -58,99 +190,36 @@ metadata_policy:
     forbid_unsupported_additions: true
     forbid_ai_style_cliches: true
     forbid_japanese_kana_in_output: true
-    require_fidelity_and_naturalness_review: true
-    record_source_provenance: true
-    unresolved_action: needs-review
+    record_source_language: true
+    record_original_in_provenance_or_cache: true
   publisher:
     format: "{zh}（{original}）"
-    use_fullwidth_parentheses: true
     avoid_identical_duplication: true
     incomplete_action: needs-review
   tags:
     forbid_han_by_default: true
     allowed_han_release_tags: [简中, 繁中, 汉化, 扫图]
     protected: [cosplay]
-    preserve_existing_exact: [cosplay]
     locked_special_allowlist: []
-    route_release_terms_outside_tags: false
-    unresolved_action: needs-review
-
-naming:
-  series_directory: "{series}"
-  volume_file: "{series} v{volume:02}.cbz"
-  chapter_file: "{series} Vol.{volume:02} Ch.{chapter:03}.cbz"
-  chapter_file_without_volume: "{series} Ch.{chapter:03}.cbz"
-  special_directory: "Specials"
-  special_file: "{series} SP{chapter:02} {title}.cbz"
-  page_file: "{page:0000}.{extension}"
-  sanitize_for_windows: true
-
-images:
-  preserve_original_bytes: true
-  fix_exif_orientation: true
-  detect_duplicates: true
-  detect_spreads: true
-  split_spreads: false
-  split_direction: rtl
-
-pdf:
-  profile: balanced-high-quality
-  prefer_lossless_extraction: true
-  render_dpi: 240
-  jpeg_quality: 92
-  avoid_upscaling: true
-  preserve_original_pdf: true
-  split_multi_chapter_volumes: true
-  allow_ocr_for_boundaries: false
-  unresolved_boundary_action: fallback-volume
-  fallback_requires_confirmed_volume_identity: true
-  fallback_requires_exact_source_page_coverage: true
-  fallback_preserve_natural_page_order: true
-
-chapter_packaging:
-  one_chapter_per_cbz_when_boundaries_reliable: true
-  global_volume_profile_requires_explicit_request: true
-  automatic_volume_fallback: true
-  fallback_omit_chapter_number: true
-  require_continuous_chapters: true
-  require_contiguous_page_spans: true
-  require_exact_source_page_coverage: true
-  front_matter: first_chapter
-  end_matter: last_chapter
-  preserve_repeated_release_pages: true
-  alternate_editions_directory: "_Needs Review/Alternate Editions"
-
-epub:
-  convert_image_based: true
-  preserve_reflowable: true
-
-comicinfo:
-  preserve_unknown_fields: true
-  language: zh-Hans
-  manga: YesAndRightToLeft
-  include_page_entries: true
-  mark_first_page_as_cover: true
 
 validation:
-  verify_crc: true
+  verify_zip_crc: true
+  verify_single_root_comicinfo: true
+  verify_comicinfo_parse: true
   decode_all_images: true
   verify_page_count: true
-  verify_xml: true
-  verify_kavita_layout: true
-  create_sha256: true
-  verify_unique_chapter_identity: true
-  verify_one_package_unit_per_cbz: true
-  allow_documented_volume_fallback: true
-  verify_volume_fallback_identity: true
+  verify_natural_page_order: true
+  verify_series_identity_unique: true
+  audit_series_identity: true
+  verify_intentional_gaps: true
+  verify_documented_volume_fallbacks: true
   verify_source_page_coverage: true
   verify_source_hash_unchanged: true
-  verify_chinese_title_fields: true
-  verify_summary_translation_fidelity: true
-  verify_summary_translation_naturalness: true
-  verify_no_japanese_kana_in_summary: true
-  verify_publisher_policy: true
-  verify_tag_language_policy: true
-  verify_protected_tags: true
-  verify_non_metadata_member_bytes: true
+  verify_review_copy_hashes: true
+  verify_unaffected_archive_hashes: true
+  verify_nonmetadata_member_bytes: true
   verify_member_order_unchanged: true
-  verify_chapter_identity_unchanged: true
+  verify_summary_translation: true
+  verify_metadata_policy: true
+  verify_backup_exists: true
+  post_promotion_validation: true

@@ -1,110 +1,115 @@
-# Kavita output rules used by this skill
+# Kavita identity, boundary, and fallback rules
 
-## Core layout
+## Contents
 
-For a Kavita library profile, media files must not be placed directly at the library root. Each series must be nested in its own directory, and the same series should not be split across adjacent series folders.
+- Series identity policies
+- Boundary evidence
+- Coverage and visual review
+- Verified volume fallback
+- Missing, damaged, and incomplete content
+- ComicInfo and filenames
+- Boundary report schema
 
-Default chapter layout:
+## Series identity policies
 
-```text
-Library Root/
-└── Series Name/
-    ├── Series Name Vol.01 Ch.001.cbz
-    ├── Series Name Vol.01 Ch.002.cbz
-    ├── Series Name Ch.003.cbz
-    └── Specials/
-        └── Series Name SP01 Artbook.cbz
-```
+Choose one policy for the whole series before naming any file:
 
-Prefer one chapter per CBZ. Use the volume layout when the user explicitly asks for one CBZ per volume or when an individual confirmed volume has no reliable chapter boundaries:
+| Policy | Use | Normal chapter identity |
+|---|---|---|
+| `continuous-chapter` | Default; continuous story numbering across source volumes | `<Series> Ch.<chapter:03>.cbz`; ComicInfo `Number`; omit `Volume` |
+| `volume-aware-chapter` | Only on explicit user request | `<Series> Vol.<volume:02> Ch.<chapter:03>.cbz`; write `Volume` and `Number` |
+| `volume-only` | Explicit whole-series collection by volume | `<Series> v<volume:02>.cbz`; write `Volume`; omit `Number` |
 
-```text
-Library Root/
-└── Series Name/
-    ├── Series Name v01.cbz
-    └── Series Name v02.cbz
-```
+Under `continuous-chapter`, retain source volume only in ComicInfo `Notes`, `plan.json`, and `source-provenance.csv`. Never let source grouping become Kavita identity accidentally.
 
-Kavita uses filenames and internal metadata, not folder hierarchy alone, to parse series, volume, chapter, and special status.
+Audit and stop automatic finalization for `SERIES_IDENTITY_MIX`, `PARTIAL_VOLUME_TAGGING`, `KAVITA_VOLUME_JUMP_RISK`, `DUPLICATE_CHAPTER_IDENTITY`, or `UNDOCUMENTED_VOLUME_FALLBACK`. A documented verified fallback volume may coexist with continuous chapters and is not an identity mix: normal chapters have `Number` and no `Volume`; fallbacks have `Volume` and no `Number`.
 
-## CBZ internals
+Do not place media directly at the Kavita library root. Keep one series in one directory, with `Specials/` below it.
 
-A normalized chapter CBZ should look like:
+## Boundary evidence
 
-```text
-Series Name Vol.01 Ch.001.cbz
-├── 0001.jpg
-├── 0002.jpg
-├── 0003.webp
-└── ComicInfo.xml
-```
+Inspect permitted evidence in this order, weighing conflicts rather than accepting the first marker:
 
-`ComicInfo.xml` must use that exact capitalization and be placed at archive root. Internal metadata can override information parsed from filenames.
+1. Embedded contents, PDF bookmarks, and embedded metadata.
+2. EPUB OPF manifest, spine order, NCX, navigation document, and embedded metadata.
+3. Visible contents pages, chapter title pages, chapter captions, and structural changes.
+4. Filename, directory name, and existing ComicInfo.
+5. Adjacent chapter sequence and reliable volume-to-chapter mapping.
+6. Reliable external chapter order/page information.
+7. OCR only after explicit user authorization.
 
-## Chapter identity and filenames
+For printed contents-page numbers, determine the offset between printed numbering and archive/scan indices from multiple anchors. Never copy printed numbers directly into ranges without calibration.
 
-- Known volume: `<Series> Vol.{volume:02} Ch.{chapter:03}.cbz`
-- Unknown volume: `<Series> Ch.{chapter:03}.cbz`
-- Normal chapters must have unique Kavita `Series`/`Volume`/`Number` identities.
-- Put alternate language, raw, or other editions of the same chapter in `_Needs Review/Alternate Editions` unless one can be selected as the high-confidence primary edition. Record why; never overwrite or discard alternates.
-- Put confirmed extras, appendices, artbooks, and setting material in `Specials` with an `SP` number and `Format=Special`.
+Treat a lone chapter-number page as fallible. If it conflicts with contents, surrounding sequence, narrative continuity, or reliable external order, record the conflict and choose a boundary only from the combined evidence.
 
-## Multi-chapter volume PDFs
+For EPUB, follow the spine for reading order; manifest order alone is insufficient. Confirm that NCX/navigation targets exist and inspect visible headings at candidate boundaries. Preserve reflowable text EPUB instead of converting automatically.
 
-First attempt chapter-level packaging. Before conversion, identify the volume's chapter range and produce a split table containing source file, volume, chapter, packaging mode, inclusive start/end pages, packaged page count, boundary evidence, confidence, fallback reason, and front/end matter, credits, or release-page flags.
+OCR authorization must include source scope and permitted purpose in `decision-resolution.csv` and `resume-state.json`. Visually verify OCR conclusions. Reuse confirmed permission and boundaries after resume; do not ask again unless scope or source hash changed. Do not use OCR when local contents/headings suffice.
 
-Use boundary evidence in this order:
+## Coverage and visual review
 
-1. PDF bookmarks, table of contents, and embedded metadata;
-2. existing filenames, folder names, and ComicInfo;
-3. reliable volume-to-chapter mappings and public chapter page counts;
-4. local structural evidence such as page-size changes, chapter title pages, and repeated release pages;
-5. OCR only with the user's explicit permission.
+For every split source require:
 
-When reliable boundaries exist, require continuous numbered chapters, contiguous page spans, no overlaps, and `sum(end - start + 1) == source PDF page count`. Assign every source page exactly once.
+- inclusive, contiguous page spans;
+- no overlap;
+- every page assigned exactly once;
+- `sum(end - start + 1) == source_page_count`;
+- visual review of first page, last page, and pages immediately around every boundary.
 
-If reliable chapter boundaries remain unavailable after checking allowed evidence, automatically fall back to one volume CBZ only when all of these conditions hold:
+When splitting an existing CBZ, read each image member once, copy its bytes without rendering, keep source page order, record source-member-to-output-member mapping, and verify SHA-256 equality for every output image.
 
-1. the file is high-confidence evidence for exactly one series and one confirmed volume;
-2. the volume number is known and there is no evidence that the file mixes volumes;
-3. every source page is readable and the full `1..N` range can be packaged exactly once in natural order;
-4. the archive passes the normal integrity, image, ComicInfo, and checksum validations.
+Assign cover, contents, and other front matter to the first chapter. Assign end matter, production information, advertisements, copyright, and release pages to the last chapter unless a complete independent Special is proven. Preserve repeated advertisements and credits unless the user explicitly requests deletion.
 
-Name the fallback `<Series> v{volume:02}.cbz`. In ComicInfo, set the confirmed `Volume`, omit `Number`, use a reliable Chinese volume title such as `第{volume}卷`, and set the actual `PageCount`. Do not invent chapter ranges or numbers. In `_reports/chapter-boundaries.json`, set `packaging_mode` to `volume-fallback`, set chapter to null, record attempted evidence and the fallback reason, and verify the single `1..N` span equals the source page count.
+## Verified volume fallback
 
-If the volume identity, file integrity, or full-page coverage is uncertain, move the item to `_Needs Review`; automatic fallback does not authorize guessing those facts.
+After exhausting allowed evidence, create one volume CBZ instead of Review when all conditions hold:
 
-When splitting, assign front cover, contents, and other front matter to the volume's first chapter. Assign end matter, credits, release pages, and advertisements to the last chapter. In volume fallback mode, retain all pages once in source order. Keep repeated credit, release, and advertisement pages; mark reliably identified advertisement pages as `Advertisement` in ComicInfo `Pages`. Split out a `Specials` item only when it is a high-confidence independent extra.
+1. series identity is high-confidence;
+2. volume number is confirmed;
+3. the file contains exactly one complete volume;
+4. every page is readable;
+5. the natural-order `1..N` span is covered exactly once;
+6. no overlap or omission exists;
+7. no chapter number or range is fabricated;
+8. the result passes normal archive validation.
 
-Inputs already representing one chapter per PDF, image-based EPUB, or archive remain one-to-one chapter CBZs.
+Also assign a stable `fallback_id` and record a machine-readable cross-package overlap audit against every active chapter, Special, and other fallback in the series. Derive exact matches and `dhash-88-color` candidates from the actual decoded pages; record the threshold, compared canonical identities/archive hashes, exact page SHA-256 comparisons, every calculated candidate, and one reviewer/reason/hash-bound decision for each candidate. Use a result of `no-overlap` or `resolved` and link its stable audit-record ID. A report-supplied empty candidate list is valid only when recomputation also finds none; an incomplete or unresolved audit is ineligible for formal placement.
 
-## Existing library updates
+Output `<Series> v<volume:02>.cbz`; write ComicInfo `Volume`; omit `Number`; use a reliable Chinese volume `Title`; set `packaging_mode: volume-fallback`; and record attempted evidence plus the reason reliable chapter boundaries could not be established.
 
-For metadata-only updates, keep the existing CBZ's images, other non-metadata members, member order, page order, and chapter identity unchanged. Create a backup, build and validate the candidate in staging, compare per-member hashes, then atomically replace the output. See `METADATA_POLICY.md`.
+Never omit a complete confirmed volume solely because it cannot be split. Never disguise it as one long chapter, divide it evenly, or estimate boundaries. Mark every fallback in preflight, identity audit, boundary report, and final report. `continuous-chapter` plus documented fallback is permitted by `mixed_packaging_policy: allow-documented-volume-fallback`.
 
-## Package ComicInfo
+Recheck a fallback when new contents/headings/evidence or OCR permission becomes available. Fallback is reversible, not a permanent ban on later splitting.
 
-Set `Series`, `LocalizedSeries`, and `SeriesSort` consistently; `Number` to the actual chapter; `Volume` only to a confirmed volume; `Count` only from reliable total-chapter evidence; and `PageCount` to the actual packaged image count. Retain evidence-backed `LanguageISO`, `Manga`, and other metadata.
+## Missing, damaged, and incomplete content
 
-For a volume fallback, omit `Number`, set the confirmed `Volume`, use a reliable Chinese volume title, and keep the full source page count. Do not mark a fallback volume as `Special`.
+Distinguish these states:
 
-## Common volume markers
+- Missing source volume/chapter: preserve the real chapter gap; create nothing.
+- Complete source volume without reliable boundaries: create a verified volume fallback.
+- Present but damaged/incomplete source: preserve source and review copy; create no formal archive.
 
-Examples recognized by common Kavita naming rules include:
+Only route to `_Needs Review` for uncertain series/volume identity, possible mixed volumes, corruption/missing pages, unverifiable full coverage, or unresolved duplicate identity.
 
-```text
-v1
-vol 1
-vol. 1
-volume 01
-第01卷
-卷2
-册2
-2巻
-```
+A contents entry does not prove pages are present. If a listed interlude begins outside the scan range or lacks a complete independent span, create no Special and report `contents-listed-but-scan-absent`.
 
-For specials, use an `SP` marker or appropriate `Format` metadata.
+## ComicInfo and filenames
 
-## Runtime verification
+| Unit | Filename | `Number` | `Volume` | `Format` |
+|---|---|---|---|---|
+| Continuous chapter | `<Series> Ch.<chapter:03>.cbz` | Actual chapter | Omit | Evidence-based |
+| Volume-aware chapter | `<Series> Vol.<volume:02> Ch.<chapter:03>.cbz` | Actual chapter | Confirmed volume | Evidence-based |
+| Volume fallback/volume-only | `<Series> v<volume:02>.cbz` | Omit | Confirmed volume | Not `Special` |
+| Special | `<Series> SP<index:02> <Title>.cbz` | `SPxx` | Omit | `Special` |
 
-Because Kavita changes over time, the agent must confirm current official scanner and metadata documentation before relying on edge-case parsing behavior.
+Keep `Series`, `LocalizedSeries`, and `SeriesSort` identical and Chinese. Use root `ComicInfo.xml`, actual `PageCount`, correct reading direction, and safe XML parsing.
+
+## Boundary report schema
+
+Each `chapter-boundaries.json` source record must contain `source`, `source_sha256`, `source_page_count`, `boundary_method`, `coverage`, `packaging_mode`, `fallback_reason`, `attempted_evidence`, `ocr_used`, `units`, and `deliberate_missing_ranges`. If an older consumer requires `intentional_missing_ranges`, serialize it only as a mirrored compatibility alias of the same records; never let the two diverge.
+
+A missing-source record must use `record_kind: missing-source` and distinguish `missing_scope_kind: chapter-range` from `missing_scope_kind: source-volume`. Because there is no source file to hash or count, keep the required keys as `source: <expected locator>`, `source_sha256: null`, and `source_page_count: null`; this null exception is allowed only for `record_kind: missing-source`. For an absent source volume whose chapter mapping is unknown, store the confirmed source volume and `chapter_range: null`, then emit `UNMAPPED_SOURCE_ABSENCE`; do not convert it to `CONFIRMED_SOURCE_GAP`. A documented fallback may use `fallback_covered_range` only when reliable mapping evidence supports the range. Otherwise record `coverage_relation: unnumbered-volume-coverage`; it does not prove or silently close a numbered chapter gap.
+
+Each unit must contain `output`, `kind`, `chapter` or `special`, `start`, `end`, `page_count`, `evidence`, `confidence`, `includes_front_matter`, `includes_end_matter`, `includes_credits`, and `includes_advertisements`. For fallback, use one `1..N` unit with no chapter. A Special additionally records verified source components and full source-file SHA-256 values, included source pages, and a continuous output-page mapping whose source page SHA-256 equals both the preserved source page and final CBZ page. Merged Specials also bind every omitted page to the real source page, retained output target, exact or visually confirmed perceptual evidence, and a review copy listed in the verified review manifest.
+
+Record evidence conflicts, chosen rationale, visual-review pages/results, gaps, overlaps, assigned-page total, and exact-coverage boolean. Verify current official Kavita parsing behavior before relying on edge cases.

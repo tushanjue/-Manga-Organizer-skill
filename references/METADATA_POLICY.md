@@ -87,14 +87,12 @@ This vocabulary normalizes only terms already supported by reliable evidence; it
 - Only an exact allowlist entry may bypass normal validation. Record the retained value and reason in the final report.
 - If a protected or locked tag is lost or changed, raise `META011` and do not finalize.
 
-## Existing CBZ metadata-only updates
+## Existing CBZ updates
 
-1. Before editing, record chapter identity and each archive member's name, order, uncompressed size, CRC, and SHA-256.
-2. Back up the existing CBZ and build the candidate in staging.
-3. Change only the root `ComicInfo.xml`; preserve all image and other non-metadata members byte-for-byte and in the same order.
-4. Validate metadata, member invariants, ZIP CRC, `PageCount`, page order, chapter sequence, and source hashes before atomic replacement.
-5. The ZIP container hash may change because ComicInfo changed; non-metadata per-member hashes must not.
+For `metadata-refresh`, preserve filename, directory, all identity fields, member order, and every non-metadata byte; change only non-identity fields in root `ComicInfo.xml`.
+
+For an explicitly authorized `identity-normalization`, follow `IDENTITY_REORGANIZATION.md`: change only planned identity fields/paths, preserve non-ComicInfo bytes and order, and emit member-level before/after audits. Always back up, stage, validate, and replace atomically.
 
 ## Required reporting
 
-Report the final Chinese series name, final Publisher, tag normalization mapping, protected/allowlisted tags and reasons, omitted or review-required tags, and the before/after non-metadata member comparison.
+Report the final Chinese series name, Summary source language/status, final Publisher, tag normalization mapping, protected/allowlisted tags and reasons, omitted/review-required tags, and the before/after non-metadata member comparison.
